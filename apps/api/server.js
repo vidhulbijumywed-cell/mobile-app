@@ -47,9 +47,14 @@ export function createApi(service, { allowedOrigins = [] } = {}) {
           const { hash } = await import('./service.js');
           await service.pool.query('DELETE FROM sessions WHERE token_hash=$1', [hash(req.headers.authorization.slice(7))]); result = { loggedOut: true };
         } else {
+          const programmeMatch = path.match(/^\/clients\/([0-9a-f-]{36})\/programme$/i);
+          if (programmeMatch && ['GET','POST'].includes(req.method)) {
+            result = await service.programme(actor, programmeMatch[1], req.method === 'POST' ? body : undefined);
+          } else {
           const match = path.match(/^\/clients\/([0-9a-f-]{36})\/assessment$/i);
           if (!match || !['GET', 'PUT'].includes(req.method)) throw new Failure(404, 'Not found');
           result = await service.assessment(actor, match[1], req.method === 'PUT' ? body.answers ?? null : undefined);
+          }
         }
       }
       res.end(JSON.stringify(result));

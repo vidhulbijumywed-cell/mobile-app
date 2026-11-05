@@ -21,3 +21,12 @@ CREATE TABLE IF NOT EXISTS audit_events (
  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, actor_id uuid REFERENCES users,
  action text NOT NULL, subject_id uuid, created_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE TABLE IF NOT EXISTS programme_revisions (
+ client_id uuid NOT NULL REFERENCES users,
+ revision integer NOT NULL CHECK (revision > 0),
+ title text NOT NULL,
+ exercises jsonb NOT NULL,
+ created_by uuid NOT NULL REFERENCES users,
+ created_at timestamptz NOT NULL DEFAULT now(),
+ PRIMARY KEY (client_id, revision)
+);

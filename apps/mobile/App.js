@@ -18,8 +18,9 @@ export default function App() {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [invitation, setInvitation] = useState('');
   const [session, setSession] = useState(null); const [answers, setAnswers] = useState({}); const [savedAt, setSavedAt] = useState(null);
+  const [programme, setProgramme] = useState(null); const [programmeLoaded, setProgrammeLoaded] = useState(false);
   const [busy, setBusy] = useState(false); const [message, setMessage] = useState(''); const [loaded, setLoaded] = useState(false);
-  function clearSession() { setSession(null); setAnswers({}); setSavedAt(null); setLoaded(false); setPassword(''); setInvitation(''); }
+  function clearSession() { setProgramme(null); setProgrammeLoaded(false); setSession(null); setAnswers({}); setSavedAt(null); setLoaded(false); setPassword(''); setInvitation(''); }
   async function api(path, method = 'GET', body, accessToken = session?.token) {
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 15000);
     try {
@@ -35,12 +36,17 @@ export default function App() {
     const result = await api(`/clients/${id}/assessment`, 'GET', undefined, token);
     setAnswers(result.assessment?.answers || {}); setSavedAt(result.assessment?.updated_at || null); setLoaded(true);
   }
+  async function loadProgramme(token, id) {
+    const result = await api(`/clients/${id}/programme`, 'GET', undefined, token);
+    setProgramme(result.programme); setProgrammeLoaded(true);
+  }
   async function signIn() {
     const result = await api('/auth/login', 'POST', { email: email.trim(), password }, null);
     const me = await api('/me', 'GET', undefined, result.accessToken);
     if (me.role !== 'client') { await api('/auth/logout','POST',{},result.accessToken); throw new Error('Use a client account here. Staff use FitPilot Coach.'); }
     setPassword(''); setSession({ id: me.id, token: result.accessToken });
     await load(result.accessToken, me.id);
+    await loadProgramme(result.accessToken, me.id);
   }
   return <SafeAreaView style={styles.screen}><KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
     <View style={styles.brand}><Text style={styles.wordmark}>FitPilot</Text><Text style={styles.tagline}>Your next chapter starts here.</Text></View>
@@ -68,6 +74,17 @@ export default function App() {
         })} />
       </>}
       <Button title="Sign out" secondary disabled={busy} onPress={() => run(async () => { await api('/auth/logout','POST',{}); clearSession(); setMessage('Signed out.'); })} />
+    </View>}
+    {session && <View style={[styles.card, { marginTop: 20 }]}>
+      <Text style={styles.eyebrow}>TRAINING</Text><Text style={styles.title}>Your workout preview</Text>
+      <Text style={styles.body}>Your coach can prepare your workout here. This is a preview only. Training activation is pending the approved assessment and package rules.</Text>
+      {programmeLoaded ? programme ? <>
+        <Text style={styles.label}>{programme.title} • Revision {programme.revision}</Text>
+        {programme.exercises.map(exercise => <View key={exercise.id} style={styles.field}>
+          <Text style={styles.label}>{exercise.name}</Text><Text style={styles.body}>{exercise.sets} sets × {exercise.reps} reps • Rest {exercise.restSeconds} seconds</Text>
+        </View>)}
+      </> : <Text style={styles.body}>No workout preview assigned yet. Your coach will prepare it.</Text> : <Text style={styles.body}>Workout preview has not loaded.</Text>}
+      <Button title="Refresh workout preview" secondary disabled={busy} onPress={() => run(() => loadProgramme(session.token, session.id))} />
     </View>}
     <Text style={styles.footer}>Coach-led training. Nutrition. Progress.</Text>
   </ScrollView></KeyboardAvoidingView></SafeAreaView>;

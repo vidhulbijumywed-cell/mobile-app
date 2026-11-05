@@ -67,11 +67,31 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
     assert.deepEqual(directory.coaches,[]);
     assert.equal((await call('/directory','GET',undefined,adminToken)).body.coaches[0].id,coach);
     assert.equal((await call(path,'PUT',{answers:{goal:'overwrite'}},coachToken)).status,403);
+    const programmePath = `/clients/${client}/programme`;
+    const workout = { title: 'Foundation strength', expectedRevision: 0, exercises: [{ name:'Bodyweight squat', sets:3, reps:8, restSeconds:60 }] };
+    assert.equal((await call(programmePath,'POST',workout,clientToken)).status,403);
+    assert.equal((await call(programmePath,'POST',{...workout, exercises:[{...workout.exercises[0], sets:0}]},coachToken)).status,400);
+    const firstRevision = await call(programmePath,'POST',workout,coachToken);
+    assert.equal(firstRevision.status,200);
+    assert.equal(firstRevision.body.activationEnabled,false);
+    assert.equal(firstRevision.body.programme.revision,1);
+    const competing = await Promise.all(['Second revision','Concurrent revision'].map(title=>call(programmePath,'POST',{...workout,title,expectedRevision:1},coachToken)));
+    assert.deepEqual(competing.map(r=>r.status).sort(),[200,409]);
+    const history = (await call(programmePath,'GET',undefined,clientToken)).body;
+    assert.equal(history.history.length,2);
+    assert.equal(history.history[1].title,'Foundation strength');
+    assert.equal(history.history[1].revision,1);
+    assert.equal((await call('/assignments','POST',{clientId:client,coachId:coach,scope:'nutrition'},adminToken)).status,200);
+    await pool.query("DELETE FROM assignments WHERE client_id=$1 AND scope='training'",[client]);
+    assert.equal((await call(programmePath,'GET',undefined,coachToken)).status,403);
+    assert.equal((await call(programmePath,'POST',{...workout,expectedRevision:2},coachToken)).status,403);
     await pool.query('DELETE FROM assignments WHERE client_id=$1',[client]);
     assert.equal((await call(path,'GET',undefined,coachToken)).status,403);
     const second = await invite('second@example.test','client');
     await call('/auth/redeem','POST',{token:second,password});
-    assert.equal((await call(path,'GET',undefined,await login('second@example.test'))).status,403);
+    const secondToken = await login('second@example.test');
+    assert.equal((await call(path,'GET',undefined,secondToken)).status,403);
+    assert.equal((await call(programmePath,'GET',undefined,secondToken)).status,403);
     // A separate database connection sees persisted data, not service memory.
     const independent = new pg.Client({ connectionString: process.env.TEST_DATABASE_URL, options:`-c search_path=${schema}` });
     await independent.connect();
@@ -89,6 +109,10 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
         await page.locator('#workspace').waitFor({ state: 'visible' });
         await page.getByRole('button', { name: 'client@example.test', exact: true }).click();
         await page.getByText('strength', { exact: true }).waitFor();
+        await page.getByLabel('Workout title', { exact: true }).fill('Coach browser workout');
+        await page.getByLabel('Exercise name', { exact: true }).fill('Supported squat');
+        await page.getByRole('button', { name: 'Publish workout preview', exact: true }).click();
+        await page.getByText('Published preview revision 3. Saving again creates a new revision.', { exact: true }).waitFor();
         await page.locator('#invite input[name=email]').fill('browser@example.test');
         await page.locator('#invite button').click();
         await page.locator('#invitation').waitFor({ state: 'visible' });
@@ -145,6 +169,14 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
             await page.locator('#login button').click();
             await page.getByRole('button', { name: 'mobile@example.test', exact: true }).click();
             await page.getByText('Build strength consistently', { exact: true }).waitFor();
+            await page.getByLabel('Workout title', { exact: true }).fill('Your first workout');
+            await page.getByLabel('Exercise name', { exact: true }).fill('Chair squat');
+            await page.getByRole('button', { name: 'Publish workout preview', exact: true }).click();
+            await page.getByText('Published preview revision 1. Saving again creates a new revision.', { exact: true }).waitFor();
+            await mobile.getByRole('button', { name: 'Refresh workout preview', exact: true }).click();
+            await mobile.getByText('Your first workout • Revision 1', { exact: true }).waitFor();
+            await mobile.getByText('Chair squat', { exact: true }).waitFor();
+            console.log('Workout browser flow passed: coach publishes revision, client refreshes preview');
             assert.deepEqual(errors, []);
             console.log('Mobile web flow passed: invitation, login, draft save, reload after sign-in, dashboard review');
           } finally { web.closeAllConnections(); await new Promise(resolve => web.close(resolve)); }

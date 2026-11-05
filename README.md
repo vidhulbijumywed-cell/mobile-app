@@ -33,3 +33,5 @@ The connected local trainer dashboard is served at the API's `/coach` path. It s
 ## Client onboarding app
 
 The shared Expo app now supports invitation redemption, client sign-in and draft assessments connected to the API. See [mobile development and validation](docs/MOBILE.md). iOS/Android bundles and the browser onboarding flow are tested; native device installation and production release remain unverified.
+
+Trainer/admin users can now publish a versioned workout preview for a selected client. The mobile app displays that preview; training activation and offline logging are not yet enabled. See the backend guide for routes and remaining programming scope.

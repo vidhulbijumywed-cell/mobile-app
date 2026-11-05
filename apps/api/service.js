@@ -77,6 +77,34 @@ export class Service {
       await this.audit(db, actor, `assignment.${scope}`, clientId);
     }); return { saved: true };
   }
+  async programme(actor, clientId, input) {
+    return this.transaction(async db => {
+      // Serialize revision creation per client, including the first revision.
+      const client = await db.query("SELECT id FROM users WHERE id=$1 AND role='client' FOR NO KEY UPDATE", [clientId]);
+      const assignment = actor.role === 'coach' ? await db.query("SELECT 1 FROM assignments WHERE client_id=$1 AND coach_id=$2 AND scope='training' FOR SHARE", [clientId, actor.id]) : null;
+      const permitted = actor.role === 'admin' || (actor.role === 'client' && actor.id === clientId) || (actor.role === 'coach' && assignment.rowCount > 0);
+      if (!permitted) throw new Failure(403, 'Forbidden');
+      if (!client.rowCount) throw new Failure(404, 'Client not found');
+      const existing = await db.query('SELECT revision,title,exercises,created_by,created_at FROM programme_revisions WHERE client_id=$1 ORDER BY revision DESC', [clientId]);
+      if (input !== undefined) {
+        if (actor.role === 'client') throw new Failure(403, 'Only a training coach or admin may publish');
+        const { title, exercises, expectedRevision } = input;
+        if (typeof title !== 'string' || !title.trim() || title.length > 120 || !Number.isSafeInteger(expectedRevision) || expectedRevision < 0 || !Array.isArray(exercises) || exercises.length < 1 || exercises.length > 30) throw new Failure(400, 'Invalid programme');
+        const cleanExercises = exercises.map((exercise, index) => {
+          if (!exercise || typeof exercise !== 'object') throw new Failure(400, 'Invalid exercise');
+          const { name, sets, reps, restSeconds } = exercise;
+          if (typeof name !== 'string' || !name.trim() || name.length > 120 || !Number.isSafeInteger(sets) || sets < 1 || sets > 20 || !Number.isSafeInteger(reps) || reps < 1 || reps > 200 || !Number.isSafeInteger(restSeconds) || restSeconds < 0 || restSeconds > 1800) throw new Failure(400, 'Invalid exercise prescription');
+          return { id: `exercise-${index + 1}`, name: name.trim(), sets, reps, restSeconds };
+        });
+        const latest = existing.rows[0]?.revision ?? 0;
+        if (expectedRevision !== latest) throw new Failure(409, 'Programme changed. Reload before publishing another revision.');
+        await db.query('INSERT INTO programme_revisions(client_id,revision,title,exercises,created_by) VALUES($1,$2,$3,$4,$5)', [clientId, latest + 1, title.trim(), JSON.stringify(cleanExercises), actor.id]);
+        await this.audit(db, actor, 'programme.revision.published', clientId);
+      } else await this.audit(db, actor, 'programme.viewed', clientId);
+      const { rows } = await db.query('SELECT revision,title,exercises,created_by,created_at FROM programme_revisions WHERE client_id=$1 ORDER BY revision DESC', [clientId]);
+      return { programme: rows[0] ?? null, history: rows, activationEnabled: false, deliveryStatus: 'preview-only' };
+    });
+  }
   async assessment(actor, clientId, answers) {
     return this.transaction(async db => {
       const permitted = actor.role === 'admin' || (actor.role === 'client' && actor.id === clientId) ||
