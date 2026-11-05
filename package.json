@@ -12,7 +12,8 @@
     "dev:api": "node apps/api/main.js",
     "db:migrate": "node apps/api/migrate.js",
     "db:bootstrap": "node apps/api/bootstrap.js",
-    "dev:mobile": "npm run start --workspace @fitpilot/mobile"
+    "dev:mobile": "npm run start --workspace @fitpilot/mobile",
+    "demo": "node scripts/demo.js"
   },
   "dependencies": {
     "pg": "8.16.3"

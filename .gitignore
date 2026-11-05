@@ -8,3 +8,4 @@ dist/
 .next/
 dist-web/
 dist-native/
+dist-demo/

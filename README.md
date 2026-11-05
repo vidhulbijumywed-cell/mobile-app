@@ -37,3 +37,7 @@ The shared Expo app now supports invitation redemption, client sign-in and draft
 Trainer/admin users can now publish a versioned workout preview for a selected client. The mobile app displays that preview; training activation and offline logging are not yet enabled. See the backend guide for routes and remaining programming scope.
 
 Local practice-session logging and retry-safe set sync are now available. See [offline logging design and validation](docs/OFFLINE.md). Browser restart and lost-acknowledgement recovery are tested; native physical-device execution remains unverified.
+
+## Try the connected working model
+
+With Node.js 24 and Docker running: `npm ci`, then `npm run demo`. See [DEMO.md](DEMO.md) for fictional sign-ins and the complete walkthrough. The command seeds an isolated demo schema and serves the client and coach dashboard together on loopback port 3001.
