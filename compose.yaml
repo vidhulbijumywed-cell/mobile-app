@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:17@sha256:3b0cda93be7c8dba2ed484d19393d93845dc3dafb88973e248ba8e6d99d784e1
+    environment:
+      POSTGRES_DB: fitpilot
+      POSTGRES_PASSWORD: fitpilot-local-only
+    ports:
+      - '127.0.0.1:54329:5432'
+    volumes:
+      - fitpilot-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d fitpilot']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  fitpilot-db:

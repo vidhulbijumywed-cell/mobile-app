@@ -23,3 +23,7 @@ Six tests cover initial training access, assessment and sync rules using an in-m
 
 - [Architecture and permissions](docs/ARCHITECTURE.md)
 - [Staged backlog and feature statuses](docs/BACKLOG.md)
+
+## Backend foundation
+
+A local-only PostgreSQL-backed API now supports invitations, login/logout, coach assignments and draft assessments. See [backend setup and API routes](docs/BACKEND.md). Run `npm run test:api` with TEST_DATABASE_URL configured for integration tests. No production deployment or email delivery is configured.
