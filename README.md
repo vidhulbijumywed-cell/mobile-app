@@ -29,3 +29,7 @@ Six tests cover initial training access, assessment and sync rules using an in-m
 A local-only PostgreSQL-backed API now supports invitations, login/logout, coach assignments and draft assessments. See [backend setup and API routes](docs/BACKEND.md). Run `npm run test:api` with TEST_DATABASE_URL configured for integration tests. No production deployment or email delivery is configured.
 
 The connected local trainer dashboard is served at the API's `/coach` path. It supports staff sign-in, scoped client lists, assessment review and admin invitations/assignments. See the backend guide for setup and optional Chromium browser tests.
+
+## Client onboarding app
+
+The shared Expo app now supports invitation redemption, client sign-in and draft assessments connected to the API. See [mobile development and validation](docs/MOBILE.md). iOS/Android bundles and the browser onboarding flow are tested; native device installation and production release remain unverified.

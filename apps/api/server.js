@@ -1,11 +1,20 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { Failure } from './service.js';
-export function createApi(service) {
+export function createApi(service, { allowedOrigins = [] } = {}) {
   const attempts = new Map();
   const server = createServer(async (req, res) => {
     res.setHeader('Content-Type', 'application/json'); res.setHeader('Cache-Control', 'no-store');
     try {
+      const origin = req.headers.origin;
+      if (origin) {
+        if (origin !== `http://${req.headers.host}` && !allowedOrigins.includes(origin)) throw new Failure(403, 'Origin not permitted');
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
+        res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+        if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return; }
+      }
       // Local development guard. Production requires distributed rate limiting and a trusted proxy policy.
       const key = req.socket.remoteAddress; const now = Date.now();
       const rate = attempts.get(key) ?? { start: now, count: 0 };

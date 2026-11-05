@@ -1,4 +1,6 @@
 import test from 'node:test';
+import { createServer } from 'node:http';
+import { resolve, extname } from 'node:path';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
@@ -12,13 +14,14 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
   const root = new pg.Pool({ connectionString: process.env.TEST_DATABASE_URL });
   await root.query(`CREATE SCHEMA ${schema}`);
   const pool = new pg.Pool({ connectionString: process.env.TEST_DATABASE_URL, options: `-c search_path=${schema}` });
-  const server = createApi(new Service(pool));
+  const allowedOrigins = [];
+  const server = createApi(new Service(pool), { allowedOrigins });
   try {
     await pool.query(await readFile(new URL('../apps/api/schema.sql', import.meta.url), 'utf8'));
     const admin = randomUUID();
     const password = 'fictional-test-password';
     await pool.query('INSERT INTO users VALUES($1,$2,$3,$4)', [admin, 'admin@example.test', 'admin', passwordHash(password)]);
-    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    await new Promise(resolve => server.listen(process.env.MOBILE_WEB_DIR ? 3001 : 0, '127.0.0.1', resolve));
     const url = `http://127.0.0.1:${server.address().port}`;
     async function call(path, method = 'GET', body, token) {
       const response = await fetch(url + path, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -30,6 +33,9 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
     assert.match(await page.text(), /Your coaching workspace/);
     assert.equal((await fetch(url + '/coach/app.js')).status, 200);
     assert.equal((await fetch(url + '/coach/style.css')).status, 200);
+    const deniedOrigin = await fetch(url + '/auth/login', { method: 'OPTIONS', headers: { Origin: 'https://untrusted.example', 'Access-Control-Request-Method': 'POST' } });
+    assert.equal(deniedOrigin.status, 403);
+    assert.equal(deniedOrigin.headers.get('access-control-allow-origin'), null);
     const login = async email => (await call('/auth/login','POST',{email,password})).body.accessToken;
     const adminToken = await login('admin@example.test'); assert.ok(adminToken);
     assert.equal((await call('/invitations','POST',{email:'no@example.test',role:'client'})).status,401);
@@ -96,6 +102,53 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
         assert.equal(await page.locator('#invite-token').inputValue(), '');
         assert.deepEqual(errors, []);
         console.log('Browser flow passed: login, assessment, invitation, assignment, logout');
+        if (process.env.MOBILE_WEB_DIR) {
+          const rootDir = resolve(process.env.MOBILE_WEB_DIR);
+          const web = createServer(async (req, res) => {
+            try {
+              const pathname = new URL(req.url, 'http://localhost').pathname;
+              const file = resolve(rootDir, '.' + (pathname === '/' ? '/index.html' : pathname));
+              if (!file.startsWith(rootDir + '/')) { res.writeHead(403).end(); return; }
+              res.setHeader('Content-Type', extname(file) === '.js' ? 'text/javascript' : 'text/html');
+              res.end(await readFile(file));
+            } catch { res.writeHead(404).end(); }
+          });
+          await new Promise(resolve => web.listen(8081, '127.0.0.1', resolve));
+          allowedOrigins.push('http://127.0.0.1:8081');
+          try {
+            const mobileInvite = await invite('mobile@example.test','client');
+            const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
+            mobile.on('pageerror', error => errors.push(error.message));
+            await mobile.goto('http://127.0.0.1:8081');
+            await mobile.getByRole('button', { name: 'I have an invitation', exact: true }).click();
+            await mobile.getByLabel('Invitation token', { exact: true }).fill('invalid-token');
+            await mobile.getByLabel('Create password (12–256 characters)', { exact: true }).fill(password);
+            await mobile.getByRole('button', { name: 'Accept invitation', exact: true }).click();
+            await mobile.getByText('Invalid or expired invitation', { exact: true }).waitFor();
+            await mobile.getByLabel('Invitation token', { exact: true }).fill(mobileInvite);
+            await mobile.getByRole('button', { name: 'Accept invitation', exact: true }).click();
+            await mobile.getByText('Account created. Sign in with the email address that received your invitation.', { exact: true }).waitFor();
+            await mobile.getByLabel('Email', { exact: true }).fill('mobile@example.test');
+            await mobile.getByLabel('Password', { exact: true }).fill(password);
+            await mobile.getByRole('button', { name: 'Sign in', exact: true }).click();
+            await mobile.getByLabel('What would you like coaching to help you achieve?', { exact: true }).fill('Build strength consistently');
+            await mobile.getByRole('button', { name: 'Save draft', exact: true }).click();
+            await mobile.getByText('Draft saved. Your assigned coach can review it.', { exact: true }).waitFor();
+            await mobile.getByRole('button', { name: 'Sign out', exact: true }).click();
+            await mobile.getByLabel('Password', { exact: true }).fill(password);
+            await mobile.getByRole('button', { name: 'Sign in', exact: true }).click();
+            await mobile.getByRole('button', { name: 'Save draft', exact: true }).waitFor();
+            assert.equal(await mobile.getByLabel('What would you like coaching to help you achieve?', { exact: true }).inputValue(), 'Build strength consistently');
+            // Review the mobile-submitted draft through the existing trainer dashboard.
+            await page.locator('#login input[name=email]').fill('admin@example.test');
+            await page.locator('#login input[name=password]').fill(password);
+            await page.locator('#login button').click();
+            await page.getByRole('button', { name: 'mobile@example.test', exact: true }).click();
+            await page.getByText('Build strength consistently', { exact: true }).waitFor();
+            assert.deepEqual(errors, []);
+            console.log('Mobile web flow passed: invitation, login, draft save, reload after sign-in, dashboard review');
+          } finally { web.closeAllConnections(); await new Promise(resolve => web.close(resolve)); }
+        }
       } finally { await browser.close(); }
     }
     assert.ok(Number((await pool.query('SELECT count(*) FROM audit_events')).rows[0].count)>=5);

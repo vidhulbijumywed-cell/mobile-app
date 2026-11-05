@@ -5,6 +5,6 @@ if (process.env.NODE_ENV === 'production') throw new Error('Development API: pro
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL required');
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 await pool.query('SELECT 1');
-const server = createApi(new Service(pool));
+const server = createApi(new Service(pool), { allowedOrigins: ['http://127.0.0.1:3001', 'http://localhost:3001', ...(process.env.DEV_WEB_ORIGINS || '').split(',').filter(Boolean)] });
 server.listen(Number(process.env.PORT ?? 3001), '127.0.0.1', () => console.log('FitPilot development API listening on loopback'));
 for (const signal of ['SIGINT','SIGTERM']) process.on(signal, () => server.close(async () => { await pool.end(); process.exit(0); }));
