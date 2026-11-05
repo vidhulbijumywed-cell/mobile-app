@@ -24,6 +24,12 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
       const response = await fetch(url + path, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
       return { status: response.status, body: await response.json() };
     }
+    const page = await fetch(url + '/coach');
+    assert.equal(page.status, 200);
+    assert.match(page.headers.get('content-security-policy'), /script-src 'self'/);
+    assert.match(await page.text(), /Your coaching workspace/);
+    assert.equal((await fetch(url + '/coach/app.js')).status, 200);
+    assert.equal((await fetch(url + '/coach/style.css')).status, 200);
     const login = async email => (await call('/auth/login','POST',{email,password})).body.accessToken;
     const adminToken = await login('admin@example.test'); assert.ok(adminToken);
     assert.equal((await call('/invitations','POST',{email:'no@example.test',role:'client'})).status,401);
@@ -45,8 +51,15 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
     const path = `/clients/${client}/assessment`;
     assert.equal((await call(path,'PUT',{answers:{goal:'strength'}},clientToken)).status,200);
     assert.equal((await call(path,'GET',undefined,coachToken)).status,403);
+    assert.deepEqual((await call('/directory','GET',undefined,coachToken)).body.clients, []);
     assert.equal((await call('/assignments','POST',{clientId:client,coachId:coach,scope:'training'},adminToken)).status,200);
     assert.equal((await call(path,'GET',undefined,coachToken)).body.assessment.answers.goal,'strength');
+    assert.equal((await call('/me','GET',undefined,coachToken)).body.role, 'coach');
+    assert.equal((await call('/directory','GET',undefined,clientToken)).status,403);
+    const directory = (await call('/directory','GET',undefined,coachToken)).body;
+    assert.deepEqual(directory.clients.map(c=>c.id),[client]);
+    assert.deepEqual(directory.coaches,[]);
+    assert.equal((await call('/directory','GET',undefined,adminToken)).body.coaches[0].id,coach);
     assert.equal((await call(path,'PUT',{answers:{goal:'overwrite'}},coachToken)).status,403);
     await pool.query('DELETE FROM assignments WHERE client_id=$1',[client]);
     assert.equal((await call(path,'GET',undefined,coachToken)).status,403);
@@ -57,6 +70,34 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
     const independent = new pg.Client({ connectionString: process.env.TEST_DATABASE_URL, options:`-c search_path=${schema}` });
     await independent.connect();
     try { assert.equal((await independent.query('SELECT answers FROM assessments WHERE client_id=$1',[client])).rows[0].answers.goal,'strength'); } finally { await independent.end(); }
+    if (process.env.CHROMIUM_PATH) {
+      const { chromium } = await import('playwright-core');
+      const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH, args: ['--no-sandbox'] });
+      try {
+        const page = await browser.newPage();
+        const errors = []; page.on('pageerror', error => errors.push(error.message));
+        await page.goto(url + '/coach');
+        await page.locator('#login input[name=email]').fill('admin@example.test');
+        await page.locator('#login input[name=password]').fill(password);
+        await page.locator('#login button').click();
+        await page.locator('#workspace').waitFor({ state: 'visible' });
+        await page.getByRole('button', { name: 'client@example.test', exact: true }).click();
+        await page.getByText('strength', { exact: true }).waitFor();
+        await page.locator('#invite input[name=email]').fill('browser@example.test');
+        await page.locator('#invite button').click();
+        await page.locator('#invitation').waitFor({ state: 'visible' });
+        assert.ok((await page.locator('#invite-token').inputValue()).length > 30);
+        await page.locator('#client-select').selectOption(client);
+        await page.locator('#coach-select').selectOption(coach);
+        await page.locator('#assign button').click();
+        await page.locator('#assignments').getByText('client@example.test → training: coach@example.test', { exact: true }).waitFor();
+        await page.locator('#logout').click();
+        await page.locator('#login-panel').waitFor({ state: 'visible' });
+        assert.equal(await page.locator('#invite-token').inputValue(), '');
+        assert.deepEqual(errors, []);
+        console.log('Browser flow passed: login, assessment, invitation, assignment, logout');
+      } finally { await browser.close(); }
+    }
     assert.ok(Number((await pool.query('SELECT count(*) FROM audit_events')).rows[0].count)>=5);
     assert.equal((await call('/auth/logout','POST',{},clientToken)).status,200);
     assert.equal((await call(path,'GET',undefined,clientToken)).status,401);

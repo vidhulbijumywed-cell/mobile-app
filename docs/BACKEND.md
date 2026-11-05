@@ -40,3 +40,11 @@ Export TEST_DATABASE_URL pointing at a disposable development PostgreSQL databas
 ## Outstanding gates
 
 Production managed identity/email ownership verification, actual email delivery, MFA/recovery, distributed abuse controls, HTTPS deployment, fine-grained assessment fields/consent, staff qualifications, role provisioning, audit for denied attempts, retention, versioned migrations, and business activation rules remain incomplete. The basic per-IP in-process limit is a development guard, not production protection. Synchronous password hashing needs bounded asynchronous execution before internet deployment. No programme/SQL sync endpoint, UI, payment integration or mobile persistence is claimed.
+
+## Connected coach dashboard
+
+Start the API using the steps above, then open its `/coach` path in your local browser. Admins can sign in, see the client/staff directory, create invitations, assign one coach per responsibility and review assessment drafts. Coaches see only assigned clients. Client accounts are rejected by the staff UI and staff directory API. Directory reads are audited. GET /me returns the authenticated id/role; GET /directory returns the scoped directory without credential hashes.
+
+The dashboard is a small same-origin HTML/CSS/JavaScript development client rather than the proposed Next.js production application. This keeps the first connected flow small while the service contract settles; the production framework decision remains documented in ARCHITECTURE.md. Its token stays in memory, not browser storage; reload requires signing in again. Admin invitation tokens are shown once per creation and cleared on sign-out. Do not share screenshots containing tokens. No email delivery or client redemption UI is claimed.
+
+Set CHROMIUM_PATH to your installed Chromium executable when running `npm run test:api` to enable the browser scenario. Without it the HTTP/database scenario runs, but the browser portion does not. Browser validation in this environment passed with `/usr/bin/chromium`: sign-in, assessment review, invitation creation, assignment and logout. This does not constitute real-device or production validation.

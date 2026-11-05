@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { readFile } from 'node:fs/promises';
 import { Failure } from './service.js';
 export function createApi(service) {
   const attempts = new Map();
@@ -16,12 +17,22 @@ export function createApi(service) {
       let body = {}; try { if (size) body = JSON.parse(Buffer.concat(chunks).toString()); } catch { throw new Failure(400, 'Invalid JSON'); }
       if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Failure(400, 'Invalid body');
       const path = new URL(req.url, 'http://localhost').pathname;
+      const assets = { '/coach': ['index.html', 'text/html; charset=utf-8'], '/coach/app.js': ['app.js', 'text/javascript; charset=utf-8'], '/coach/style.css': ['style.css', 'text/css; charset=utf-8'] };
+      if (req.method === 'GET' && Object.hasOwn(assets, path)) {
+        const [file, mime] = assets[path];
+        res.setHeader('Content-Type', mime);
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+        res.end(await readFile(new URL('../coach/' + file, import.meta.url))); return;
+      }
       let result;
       if (req.method === 'POST' && path === '/auth/redeem') result = await service.redeem(body);
       else if (req.method === 'POST' && path === '/auth/login') result = await service.login(body);
       else {
         const actor = await service.authenticate(req.headers.authorization?.match(/^Bearer (\S+)$/)?.[1]);
-        if (req.method === 'POST' && path === '/invitations') result = await service.invite(actor, body);
+        if (req.method === 'GET' && path === '/me') result = actor;
+        else if (req.method === 'GET' && path === '/directory') result = await service.directory(actor);
+        else if (req.method === 'POST' && path === '/invitations') result = await service.invite(actor, body);
         else if (req.method === 'POST' && path === '/assignments') result = await service.assign(actor, body);
         else if (req.method === 'POST' && path === '/auth/logout') {
           const { hash } = await import('./service.js');

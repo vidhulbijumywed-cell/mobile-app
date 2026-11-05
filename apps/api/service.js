@@ -20,6 +20,18 @@ export class Service {
     const { rows } = await this.pool.query('SELECT u.id,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()', [hash(raw)]);
     if (!rows[0]) throw new Failure(401, 'Authentication required'); return rows[0];
   }
+  async directory(actor) {
+    if (!['admin', 'coach'].includes(actor.role)) throw new Failure(403, 'Staff access required');
+    return this.transaction(async db => {
+      const clients = actor.role === 'admin'
+        ? await db.query("SELECT id,email FROM users WHERE role='client' ORDER BY email")
+        : await db.query("SELECT DISTINCT u.id,u.email FROM users u JOIN assignments a ON a.client_id=u.id WHERE a.coach_id=$1 ORDER BY u.email", [actor.id]);
+      const coaches = actor.role === 'admin' ? await db.query("SELECT id,email FROM users WHERE role='coach' ORDER BY email") : { rows: [] };
+      const assignments = actor.role === 'admin' ? await db.query('SELECT * FROM assignments') : await db.query('SELECT * FROM assignments WHERE coach_id=$1', [actor.id]);
+      await this.audit(db, actor, 'directory.viewed');
+      return { clients: clients.rows, coaches: coaches.rows, assignments: assignments.rows };
+    });
+  }
   async invite(actor, input) {
     if (actor.role !== 'admin') throw new Failure(403, 'Forbidden');
     const { email, role } = input;
