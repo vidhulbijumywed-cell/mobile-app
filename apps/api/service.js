@@ -77,6 +77,34 @@ export class Service {
       await this.audit(db, actor, `assignment.${scope}`, clientId);
     }); return { saved: true };
   }
+  async syncWorkoutSet(actor, input) {
+    if (actor.role !== 'client') throw new Failure(403, 'Client access required');
+    const { operationId, sessionId, programmeRevision, exerciseId, setNumber, reps, loadKg, recordedAt } = input;
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (typeof operationId !== 'string' || !uuid.test(operationId) || typeof sessionId !== 'string' || !uuid.test(sessionId) || !Number.isSafeInteger(programmeRevision) || programmeRevision < 1 || typeof exerciseId !== 'string' || !Number.isSafeInteger(setNumber) || setNumber < 1 || !Number.isSafeInteger(reps) || reps < 0 || reps > 1000 || !Number.isFinite(loadKg) || loadKg < 0 || loadKg > 2000 || typeof recordedAt !== 'string' || !Number.isFinite(Date.parse(recordedAt)) || new Date(recordedAt).toISOString() !== recordedAt) throw new Failure(400, 'Invalid workout set');
+    return this.transaction(async db => {
+      const plan = await db.query('SELECT exercises FROM programme_revisions WHERE client_id=$1 AND revision=$2', [actor.id, programmeRevision]);
+      const exercise = plan.rows[0]?.exercises.find(e => e.id === exerciseId);
+      if (!exercise || setNumber > exercise.sets) throw new Failure(400, 'Unknown prescribed set or programme revision');
+      await db.query('INSERT INTO workout_sessions VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [sessionId, actor.id, programmeRevision]);
+      const session = (await db.query('SELECT * FROM workout_sessions WHERE id=$1 FOR UPDATE', [sessionId])).rows[0];
+      if (session.client_id !== actor.id || session.programme_revision !== programmeRevision) throw new Failure(409, 'Session identity conflict');
+      const inserted = await db.query('INSERT INTO workout_sets VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING RETURNING operation_id', [operationId,sessionId,exerciseId,setNumber,reps,loadKg,recordedAt]);
+      const stored = (await db.query('SELECT * FROM workout_sets WHERE operation_id=$1 OR (session_id=$2 AND exercise_id=$3 AND set_number=$4)', [operationId,sessionId,exerciseId,setNumber])).rows;
+      if (stored.length !== 1 || stored[0].operation_id !== operationId || stored[0].session_id !== sessionId || stored[0].exercise_id !== exerciseId || stored[0].set_number !== setNumber || stored[0].reps !== reps || stored[0].load_kg !== loadKg || stored[0].recorded_at.toISOString() !== recordedAt) throw new Failure(409, 'Set conflict. Local data retained; review required.');
+      if (inserted.rowCount) await this.audit(db, actor, 'workout.set.synced', actor.id);
+      return { operationId, status: inserted.rowCount ? 'created' : 'duplicate', mode: 'development-only' };
+    });
+  }
+  async workoutHistory(actor, clientId) {
+    return this.transaction(async db => {
+      const allowed = actor.role === 'admin' || (actor.role === 'client' && actor.id === clientId) || (actor.role === 'coach' && (await db.query("SELECT 1 FROM assignments WHERE client_id=$1 AND coach_id=$2 AND scope='training'", [clientId,actor.id])).rowCount > 0);
+      if (!allowed) throw new Failure(403, 'Forbidden');
+      const { rows } = await db.query('SELECT s.id AS session_id,s.programme_revision,w.exercise_id,w.set_number,w.reps,w.load_kg,w.recorded_at FROM workout_sessions s JOIN workout_sets w ON w.session_id=s.id WHERE s.client_id=$1 ORDER BY w.recorded_at DESC LIMIT 500', [clientId]);
+      await this.audit(db, actor, 'workout.history.viewed', clientId);
+      return { sets: rows, mode: 'development-only' };
+    });
+  }
   async programme(actor, clientId, input) {
     return this.transaction(async db => {
       // Serialize revision creation per client, including the first revision.

@@ -41,6 +41,8 @@ export function createApi(service, { allowedOrigins = [] } = {}) {
         const actor = await service.authenticate(req.headers.authorization?.match(/^Bearer (\S+)$/)?.[1]);
         if (req.method === 'GET' && path === '/me') result = actor;
         else if (req.method === 'GET' && path === '/directory') result = await service.directory(actor);
+        else if (req.method === 'POST' && path === '/workout-sets') result = await service.syncWorkoutSet(actor, body);
+        else if (req.method === 'GET' && /^\/clients\/[0-9a-f-]{36}\/workout-history$/i.test(path)) result = await service.workoutHistory(actor, path.split('/')[2]);
         else if (req.method === 'POST' && path === '/invitations') result = await service.invite(actor, body);
         else if (req.method === 'POST' && path === '/assignments') result = await service.assign(actor, body);
         else if (req.method === 'POST' && path === '/auth/logout') {

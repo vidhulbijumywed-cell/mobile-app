@@ -30,3 +30,19 @@ CREATE TABLE IF NOT EXISTS programme_revisions (
  created_at timestamptz NOT NULL DEFAULT now(),
  PRIMARY KEY (client_id, revision)
 );
+CREATE TABLE IF NOT EXISTS workout_sessions (
+ id uuid PRIMARY KEY,
+ client_id uuid NOT NULL,
+ programme_revision integer NOT NULL,
+ FOREIGN KEY (client_id,programme_revision) REFERENCES programme_revisions(client_id,revision)
+);
+CREATE TABLE IF NOT EXISTS workout_sets (
+ operation_id uuid PRIMARY KEY,
+ session_id uuid NOT NULL REFERENCES workout_sessions,
+ exercise_id text NOT NULL,
+ set_number integer NOT NULL CHECK (set_number > 0),
+ reps integer NOT NULL CHECK (reps >= 0),
+ load_kg double precision NOT NULL CHECK (load_kg >= 0),
+ recorded_at timestamptz NOT NULL,
+ UNIQUE (session_id,exercise_id,set_number)
+);

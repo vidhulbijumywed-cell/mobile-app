@@ -58,3 +58,7 @@ The trainer dashboard provides an exercise editor, add/remove controls and revis
 This is the first programming slice: one workout preview per client, with immutable numbered revisions. It is not yet a full multi-day programme builder. Exercise-library records/licensed demos, schedule/rest days, load targets, set types, supersets, RPE/RIR, workout logging, offline persistence and analytics remain in the backlog. Exercise IDs in this slice are local to the exact revision, not stable library identifiers. The generic training domain's programmeId model is not wired to this preview API yet; the logging/sync schema must reference the client/revision and prescribed exercise explicitly before recording real sessions.
 
 Integration tests cover client write rejection, invalid prescriptions, nutrition-only denial, unassigned-client denial, assignment revocation, old revision retention and concurrent publishes (one succeeds and one returns 409). The Chromium scenario publishes via the trainer dashboard and verifies the client web build displays the same workout after refresh. Native bundle exports pass; installed-device behavior remains unverified.
+
+## Development workout sync
+
+POST /workout-sets and GET /clients/:id/workout-history now provide transactional set sync and scoped review. Run db:migrate to create the additive tables. See OFFLINE.md for the protocol, uniqueness guarantees and remaining limitations. These endpoints do not activate coaching packages or implement completion/adherence scoring.

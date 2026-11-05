@@ -75,12 +75,23 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
     assert.equal(firstRevision.status,200);
     assert.equal(firstRevision.body.activationEnabled,false);
     assert.equal(firstRevision.body.programme.revision,1);
+    const setOperation = { operationId:randomUUID(), sessionId:randomUUID(), programmeRevision:1, exerciseId:'exercise-1', setNumber:1, reps:8, loadKg:0, recordedAt:new Date().toISOString() };
+    const duplicated = await Promise.all([1,2].map(()=>call('/workout-sets','POST',setOperation,clientToken)));
+    assert.deepEqual(duplicated.map(r=>r.body.status).sort(),['created','duplicate']);
+    assert.equal((await call('/workout-sets','POST',{...setOperation,reps:9},clientToken)).status,409);
+    assert.equal((await call('/workout-sets','POST',{...setOperation,operationId:randomUUID()},clientToken)).status,409);
+    assert.equal((await call('/workout-sets','POST',{...setOperation,exerciseId:'unknown'},clientToken)).status,400);
+    assert.equal((await call('/workout-sets','POST',setOperation,coachToken)).status,403);
     const competing = await Promise.all(['Second revision','Concurrent revision'].map(title=>call(programmePath,'POST',{...workout,title,expectedRevision:1},coachToken)));
     assert.deepEqual(competing.map(r=>r.status).sort(),[200,409]);
     const history = (await call(programmePath,'GET',undefined,clientToken)).body;
     assert.equal(history.history.length,2);
     assert.equal(history.history[1].title,'Foundation strength');
     assert.equal(history.history[1].revision,1);
+    assert.equal((await call('/workout-sets','POST',{...setOperation,operationId:randomUUID(),setNumber:2},clientToken)).status,200);
+    const syncedSets = await call(`/clients/${client}/workout-history`,'GET',undefined,coachToken);
+    assert.equal(syncedSets.body.sets.length,2);
+    assert.ok(syncedSets.body.sets.every(s=>s.programme_revision===1));
     assert.equal((await call('/assignments','POST',{clientId:client,coachId:coach,scope:'nutrition'},adminToken)).status,200);
     await pool.query("DELETE FROM assignments WHERE client_id=$1 AND scope='training'",[client]);
     assert.equal((await call(programmePath,'GET',undefined,coachToken)).status,403);
@@ -92,6 +103,12 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
     const secondToken = await login('second@example.test');
     assert.equal((await call(path,'GET',undefined,secondToken)).status,403);
     assert.equal((await call(programmePath,'GET',undefined,secondToken)).status,403);
+    assert.equal((await call(`/clients/${client}/workout-history`,'GET',undefined,secondToken)).status,403);
+    const secondId = (await call('/me','GET',undefined,secondToken)).body.id;
+    assert.equal((await call(`/clients/${secondId}/programme`,'POST',workout,adminToken)).status,200);
+    assert.equal((await call('/workout-sets','POST',{...setOperation,operationId:randomUUID()},secondToken)).status,409);
+    assert.equal((await call(`/clients/${client}/workout-history`,'GET',undefined,coachToken)).status,403);
+    assert.equal((await pool.query('SELECT count(*) FROM workout_sets')).rows[0].count,'2');
     // A separate database connection sees persisted data, not service memory.
     const independent = new pg.Client({ connectionString: process.env.TEST_DATABASE_URL, options:`-c search_path=${schema}` });
     await independent.connect();
@@ -176,6 +193,36 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
             await mobile.getByRole('button', { name: 'Refresh workout preview', exact: true }).click();
             await mobile.getByText('Your first workout • Revision 1', { exact: true }).waitFor();
             await mobile.getByText('Chair squat', { exact: true }).waitFor();
+            await mobile.getByRole('button',{name:'Start local practice session',exact:true}).click();
+            // Simulate a dropped API connection while keeping the app bundle available.
+            await mobile.route('http://127.0.0.1:3001/**',route=>route.abort());
+            await mobile.getByLabel('Chair squat set 1 load kg',{exact:true}).fill('10');
+            await mobile.getByRole('button',{name:'Save Chair squat set 1',exact:true}).click();
+            await mobile.getByText('8 reps • 10 kg • pending',{exact:true}).waitFor();
+            await mobile.reload();
+            await mobile.getByRole('button',{name:'Resume offline practice log',exact:true}).click();
+            await mobile.getByText('8 reps • 10 kg • pending',{exact:true}).waitFor();
+            assert.equal(await mobile.getByRole('button',{name:'Sync saved sets',exact:true}).isDisabled(),true);
+            await mobile.unroute('http://127.0.0.1:3001/**');
+            await mobile.getByLabel('Email',{exact:true}).fill('mobile@example.test');
+            await mobile.getByLabel('Password',{exact:true}).fill(password);
+            await mobile.getByRole('button',{name:'Sign in',exact:true}).click();
+            await mobile.getByRole('button',{name:'Save draft',exact:true}).waitFor();
+            // Lose the acknowledgement after the server commits; retry must not duplicate.
+            let dropped = false;
+            await mobile.route('http://127.0.0.1:3001/workout-sets', async route => {
+              if (!dropped) { dropped=true; await route.fetch(); await route.abort(); } else await route.continue();
+            });
+            await mobile.getByRole('button',{name:'Sync saved sets',exact:true}).click();
+            await mobile.getByRole('button',{name:'Sync saved sets',exact:true}).waitFor();
+            await mobile.waitForFunction(()=>![...document.querySelectorAll('[role=button]')].find(b=>b.textContent==='Sync saved sets')?.hasAttribute('aria-disabled'));
+            await mobile.unroute('http://127.0.0.1:3001/workout-sets');
+            await mobile.getByRole('button',{name:'Sync saved sets',exact:true}).click();
+            await mobile.getByText('8 reps • 10 kg • synced',{exact:true}).waitFor();
+            await page.getByRole('button',{name:'Refresh synced sets',exact:true}).click();
+            await page.getByText('Revision 1 • exercise-1 set 1 • 8 reps • 10 kg',{exact:true}).waitFor();
+            assert.equal((await pool.query('SELECT count(*) FROM workout_sets WHERE load_kg=10')).rows[0].count,'1');
+            console.log('Offline browser flow passed: save without API, reload, resume, lost acknowledgement, retry, coach review');
             console.log('Workout browser flow passed: coach publishes revision, client refreshes preview');
             assert.deepEqual(errors, []);
             console.log('Mobile web flow passed: invitation, login, draft save, reload after sign-in, dashboard review');

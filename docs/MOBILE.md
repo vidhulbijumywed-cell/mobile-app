@@ -30,3 +30,7 @@ Owner approval of comprehensive assessment schema/consent, production identity/e
 ## Workout preview slice
 
 The signed-in app now loads the latest assigned workout preview and offers an explicit refresh. It shows the title, revision, prescribed sets/reps and rest intervals. No activation or session logging is enabled. Old programmes remain in server history; this slice does not cache workouts offline. The browser test verifies a trainer-published workout appears after refreshing the client preview.
+
+## Offline practice logging
+
+Local practice sessions, prescribed set recording, restart recovery and explicit retry-safe sync are now implemented. See OFFLINE.md for storage, privacy boundaries, conflict handling and tested versus unverified behavior. This supersedes the earlier note that no local workout cache exists. Activation remains unavailable; use fictional data only.

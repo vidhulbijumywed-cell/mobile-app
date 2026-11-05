@@ -1,7 +1,18 @@
 {
- "expo": {
-  "name":"FitPilot Development","slug":"fitpilot-development","version":"0.1.0","orientation":"portrait",
-  "ios":{"supportsTablet":true},
-  "web":{"bundler":"metro","output":"single"}
- }
+  "expo": {
+    "name": "FitPilot Development",
+    "slug": "fitpilot-development",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "ios": {
+      "supportsTablet": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-sqlite"
+    ]
+  }
 }

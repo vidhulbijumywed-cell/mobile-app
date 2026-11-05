@@ -49,7 +49,7 @@ async function refresh() {
         const plan = await request(`/clients/${client.id}/programme`);
         if (current !== generation) return;
         selectedClient = client;
-        renderProgramme(plan); $('programming').hidden = false;
+        renderProgramme(plan); $('programming').hidden = false; await loadWorkoutHistory();
       }
     }); li.append(button); $('clients').append(li);
   }
@@ -132,3 +132,16 @@ $('programme-form').onsubmit = event => {
     if (version === generation && selectedClient?.id === client.id) renderProgramme(result);
   });
 };
+
+async function loadWorkoutHistory() {
+  if (!selectedClient) return;
+  const id = selectedClient.id; const version = generation;
+  const result = await request(`/clients/${id}/workout-history`);
+  if (version !== generation || selectedClient?.id !== id) return;
+  $('workout-history').replaceChildren();
+  for (const set of result.sets) {
+    const li = document.createElement('li'); li.textContent = `Revision ${set.programme_revision} • ${set.exercise_id} set ${set.set_number} • ${set.reps} reps • ${set.load_kg} kg`; $('workout-history').append(li);
+  }
+  if (!result.sets.length) $('workout-history').textContent = 'No synced sets yet.';
+}
+$('refresh-history').onclick = () => task($('refresh-history'), loadWorkoutHistory);

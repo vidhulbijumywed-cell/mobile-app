@@ -8,7 +8,7 @@ Sequencing is proposed; the owner’s requirement statuses and complete feature 
 | 1a | Shared training rules | Negative permission, assessment and sync contract tests | Initial rules tested; adapters absent |
 | 1b | API/SQL/auth foundation and invitations | Single-use expiring invitations, verified identity, assignment isolation and durable audit | Local PostgreSQL/HTTP foundation tested; production identity/email verification pending |
 | 1c | Web onboarding/assignment workspace | Admin invites; assessment required; coach sees only assigned clients | Local staff dashboard connected and browser-tested; client draft assessment UI connected and web-tested; approved required-field activation pending |
-| 2 | Mobile programme download and workout logging | Both apps install; log offline, restart, reconnect and retry without loss/duplication | Workout preview publishing/revisions and online client display tested; full programme builder, offline logging and device installs pending |
+| 2 | Mobile programme download and workout logging | Both apps install; log offline, restart, reconnect and retry without loss/duplication | Preview publishing and offline practice logging/sync web-tested; SQLite native adapter bundled; full programme builder and installed-device restart QA pending |
 | 3 | Nutrition/progress/check-ins | Approved forms and source-backed food entries; photo consent and private client recipes | Pending |
 | 4 | Messaging/media/packages/basic reminders | Private participants; verified manual payment activation; timezone/quiet-hours checks | Pending |
 | 5 | Pilot hardening/distribution | Device QA, negative permissions, deletion, restore, monitoring, owner acceptance | Pending |

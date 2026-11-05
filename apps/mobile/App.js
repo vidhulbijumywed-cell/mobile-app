@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, View, Text, TextInput, Pressable, StyleSheet, Platform, KeyboardAvoidingView } from 'react-native';
+
+import WorkoutLogger from './WorkoutLogger';
+import { cacheProgramme, lastClient, rememberClient, forgetClient } from './offline/log';
 
 const API = process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://127.0.0.1:3001');
 // Provisional optional draft fields only. No activation or approved clinical assessment is implied.
@@ -15,6 +18,8 @@ function Input({ label, value, onChangeText, secure = false, multiline = false, 
   return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={onChangeText} secureTextEntry={secure} multiline={multiline} autoCapitalize={email || secure ? 'none' : 'sentences'} autoCorrect={!email && !secure} keyboardType={email ? 'email-address' : 'default'} style={[styles.input, multiline && styles.multiline]} /></View>;
 }
 export default function App() {
+  const [offlineClient,setOfflineClient] = useState(null); const [logVersion,setLogVersion] = useState(0);
+  useEffect(() => { lastClient().then(setOfflineClient).catch(() => {}); },[]);
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [invitation, setInvitation] = useState('');
   const [session, setSession] = useState(null); const [answers, setAnswers] = useState({}); const [savedAt, setSavedAt] = useState(null);
@@ -26,7 +31,7 @@ export default function App() {
     try {
       const response = await fetch(API + path, { method, signal: controller.signal, headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
       const result = await response.json();
-      if (!response.ok) { if (response.status === 401 && accessToken) clearSession(); throw new Error(result.error || 'Request failed'); }
+      if (!response.ok) { if (response.status === 401 && accessToken) clearSession(); const error = new Error(result.error || 'Request failed'); error.status = response.status; throw error; }
       return result;
     } catch (error) { if (error.name === 'AbortError') throw new Error('Connection timed out. Your unsaved answers remain on this screen.'); throw error; }
     finally { clearTimeout(timer); }
@@ -38,12 +43,13 @@ export default function App() {
   }
   async function loadProgramme(token, id) {
     const result = await api(`/clients/${id}/programme`, 'GET', undefined, token);
-    setProgramme(result.programme); setProgrammeLoaded(true);
+    await cacheProgramme(id, result.programme); setLogVersion(v=>v+1); setProgramme(result.programme); setProgrammeLoaded(true);
   }
   async function signIn() {
     const result = await api('/auth/login', 'POST', { email: email.trim(), password }, null);
     const me = await api('/me', 'GET', undefined, result.accessToken);
     if (me.role !== 'client') { await api('/auth/logout','POST',{},result.accessToken); throw new Error('Use a client account here. Staff use FitPilot Coach.'); }
+    await rememberClient(me.id); setOfflineClient(me.id);
     setPassword(''); setSession({ id: me.id, token: result.accessToken });
     await load(result.accessToken, me.id);
     await loadProgramme(result.accessToken, me.id);
@@ -52,7 +58,7 @@ export default function App() {
     <View style={styles.brand}><Text style={styles.wordmark}>FitPilot</Text><Text style={styles.tagline}>Your next chapter starts here.</Text></View>
     <View style={styles.notice}><Text>Development build • Fictional data only. Coaching activation is unavailable.</Text></View>
     <View accessibilityLiveRegion="polite"><Text style={styles.message}>{message}</Text></View>
-    {!session ? <View style={styles.card}>
+    {!session?.token ? <View style={styles.card}>
       <Text style={styles.eyebrow}>WELCOME TO YOUR COACHING SPACE</Text><Text style={styles.title}>{mode === 'login' ? 'Good to see you.' : 'Join your coach.'}</Text>
       <Text style={styles.body}>{mode === 'login' ? 'Sign in to begin your assessment or continue your draft.' : 'Enter the private invitation token supplied by your coach or administrator. Then create a password.'}</Text>
       {mode === 'redeem' ? <Input label="Invitation token" value={invitation} onChangeText={setInvitation} email /> : <Input label="Email" value={email} onChangeText={setEmail} email />}
@@ -62,6 +68,7 @@ export default function App() {
         await api('/auth/redeem','POST',{token:invitation.trim(),password},null); setInvitation(''); setPassword(''); setMode('login'); setMessage('Account created. Sign in with the email address that received your invitation.');
       })} />
       <Button title={mode === 'login' ? 'I have an invitation' : 'Back to sign in'} secondary disabled={busy} onPress={() => { setMode(mode === 'login' ? 'redeem' : 'login'); setPassword(''); setInvitation(''); setMessage(''); }} />
+    {offlineClient && <Button title="Resume offline practice log" secondary disabled={busy} onPress={() => { setSession({ id:offlineClient,token:null }); setMessage('Local fictional-data practice only. Sign in to sync.'); }} />}
     </View> : <View style={styles.card}>
       <Text style={styles.eyebrow}>GETTING TO KNOW YOU</Text><Text style={styles.title}>Your starting point</Text>
       <Text style={styles.body}>These optional questions are a provisional draft. Your coach will confirm the full assessment. Save now and return later.</Text>
@@ -73,9 +80,9 @@ export default function App() {
           const result = await api(`/clients/${session.id}/assessment`,'PUT',{answers}); setSavedAt(result.assessment.updated_at); setMessage('Draft saved. Your assigned coach can review it.');
         })} />
       </>}
-      <Button title="Sign out" secondary disabled={busy} onPress={() => run(async () => { await api('/auth/logout','POST',{}); clearSession(); setMessage('Signed out.'); })} />
+      <Button title="Sign out" secondary disabled={busy} onPress={() => run(async () => { await api('/auth/logout','POST',{}); await forgetClient(); setOfflineClient(null); clearSession(); setMessage('Signed out.'); })} />
     </View>}
-    {session && <View style={[styles.card, { marginTop: 20 }]}>
+    {session?.token && <View style={[styles.card, { marginTop: 20 }]}>
       <Text style={styles.eyebrow}>TRAINING</Text><Text style={styles.title}>Your workout preview</Text>
       <Text style={styles.body}>Your coach can prepare your workout here. This is a preview only. Training activation is pending the approved assessment and package rules.</Text>
       {programmeLoaded ? programme ? <>
@@ -86,6 +93,7 @@ export default function App() {
       </> : <Text style={styles.body}>No workout preview assigned yet. Your coach will prepare it.</Text> : <Text style={styles.body}>Workout preview has not loaded.</Text>}
       <Button title="Refresh workout preview" secondary disabled={busy} onPress={() => run(() => loadProgramme(session.token, session.id))} />
     </View>}
+    {session && <WorkoutLogger key={session.id} clientId={session.id} canSync={Boolean(session.token)} refreshKey={logVersion} send={operation=>api('/workout-sets','POST',operation)} />}
     <Text style={styles.footer}>Coach-led training. Nutrition. Progress.</Text>
   </ScrollView></KeyboardAvoidingView></SafeAreaView>;
 }
