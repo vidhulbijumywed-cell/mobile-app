@@ -1,0 +1,1063 @@
+FITPILOT
+Product RequirementsSpecification
+Trainer platform, client apps and shared coaching backend
+Version:  1.0 - consolidated discovery baselinePrepared:  4 November 2026Pilot target:  4 January 2027 (5-10 invited clients)Platforms:  iOS + Android client apps; web trainer dashboardLanguage:  English at initial launchStatus:  Requirements baseline for estimation and implementation planning
+Prepared from the FitPilot Trainer Planning Workbook (Draft 01, 04 Nov 2026) and the trainer discovery decisions recorded in this conversation.
+Important status note  This document is a requirements baseline, not a fixed-price estimate, delivery commitment, legal opinion, architecture approval or confirmation that external providers have approved access.
+Document guide
+Section
+Contents
+1
+Executive product brief
+2
+Goals, scope and success measures
+3
+Users, roles and access model
+4
+Application screen maps
+5
+Feature register
+6
+Detailed functional requirements
+7
+Core workflows and business rules
+8
+Adherence, automation and notification rules
+9
+Data model and system architecture constraints
+10
+Privacy, security and compliance requirements
+11
+Prioritised release plan: P0 / P1 / P2
+12
+Integrations and external dependencies
+13
+Content and launch asset checklist
+14
+Two-month pilot plan and exit criteria
+15
+Open decisions and risks
+16
+Implementation brief for Codex
+17
+Acceptance test catalogue
+18
+Source basis and external references
+How to read this document
+Label
+Meaning
+Confirmed
+Directly stated by the trainer or explicitly accepted during discovery.
+Proposed
+A product recommendation to make the pilot buildable; requires approval before it becomes a binding rule.
+Open
+Insufficient information to specify safely. Do not invent a value or behaviour.
+Dependency
+Requires provider approval, data access, licensing, legal review, supplied assets or external service.
+P0 / P1 / P2
+P0 = required for pilot/core operations; P1 = next release / early expansion; P2 = later capability.
+Conflict-handling rule  Where a user preference conflicts with platform rules or a system permission model, this specification records the preference and the unavoidable implementation constraint separately. Do not silently remove the constraint.
+1. Executive product brief
+FitPilot is an independently owned fitness-coaching platform intended to replace the trainer’s current reliance on Spur.fit. It consists of a client app for iOS and Android, a web-based trainer workspace (FitPilot Coach), and a shared backend. The product is designed around combined workout and nutrition coaching, with optional separate training and nutrition coaches assigned to the same client.
+The initial business is based primarily in Kerala, India, with some international clients. The current client base is 16 paying clients; the stated 12-month target is 50 high-ticket clients. The initial operating team is four training coaches, four nutritionists and one administrator.
+Dimension
+Current baseline
+Business goal
+Replace Spur.fit with a platform controlled by the business.
+Current / target clients
+16 current paying clients; target 50 high-ticket clients within 12 months.
+Programmes
+Fat-to-fit transformation; strength and conditioning; workout + nutrition combined.
+Client geography
+Mostly Kerala; some clients abroad.
+Devices
+Most current clients use iPhone; Android and iOS must launch together.
+Team
+4 training coaches, 4 nutritionists, 1 administrator (9 total).
+Pilot
+Private pilot with 5-10 existing clients; target 4 January 2027.
+Language
+English only for initial release.
+Budget
+Build budget and monthly operating ceiling are not finalised.
+Migration
+No Spur.fit data migration; start with fresh data.
+Product positioning
+FitPilot should combine the workout logging depth of a dedicated strength-training tracker with the coaching operations of a trainer platform. It is not intended to be a generic social fitness network. The product should prioritise useful coaching data, reliable logging, clear coach accountability and low-friction client adherence.
+Product principles
+Coach-led: programming, progression decisions and nutrition corrections remain under qualified human coaches.
+Client-centred data quality: imported, manually entered and calculated values must be distinguishable; missing wearable data is never treated as zero or failure.
+Offline-tolerant workouts: clients can log sessions without a connection and sync later without losing or duplicating entries.
+Least-privilege access: training and nutrition coaches see their work area plus agreed shared client information; administrators supervise all records.
+Honest estimation: photo-based food analysis is an estimate and must allow confirmation and correction.
+Business ownership: business-controlled developer accounts, domain, backend, source code, data, brand and deployment credentials must be addressed contractually.
+2. Goals, scope and success measures
+Business and product goals
+Scale from 16 current paying clients to 50 high-ticket clients over 12 months without losing coaching quality.
+Give coaches better visibility into client training, nutrition, lifestyle, recovery and progress.
+Reduce repetitive administrative work through configurable reminders, package tracking, booking and communication workflows.
+Offer clients a strong training experience: live logging, history, progression, rest timers, set types, RPE/RIR and offline capture.
+Build an extensible platform that can later support additional wearables, 3D exercise content and richer nutrition intelligence.
+In-scope product surfaces
+Surface
+Primary purpose
+Initial user
+FitPilot iOS app
+Client onboarding, plans, workout logging, meals, check-ins, messaging, booking and package status.
+Client
+FitPilot Android app
+Same core client capabilities as iOS; Android health integration via Health Connect as it is released.
+Client
+FitPilot Coach web dashboard
+Client management, assessments, programming, nutrition plans, reviews, communication, automations, bookings, packages and payments.
+Training coach / Nutrition coach
+Admin workspace
+Staff, client assignment, packages, payment oversight, global settings, privacy and audit supervision.
+Administrator
+Shared backend
+Identity, permissions, data, media, sync, notifications, provider connections and entitlement rules.
+System
+Non-goals for the first pilot
+A standalone Apple Watch app. Apple Watch data import through HealthKit may be supported without a dedicated watchOS app.
+Social feed, leaderboards or public workout sharing; these were not selected as requirements.
+AI-generated workout programmes and premade course marketplace; the workbook lists these as optional and not approved.
+WhatsApp/SMS as primary communication; the trainer selected in-app communication as the primary channel.
+Spur.fit migration; the decision is to start with fresh data.
+Guaranteed direct integrations with every wearable brand or every metric.
+Suggested pilot success measures (targets still need owner approval)
+Measure
+How to observe it
+Target status
+Onboarding completion
+Invited pilot clients who finish required assessment before programme activation.
+Set numeric target before pilot.
+Workout data reliability
+Workout logs retained through offline use and successful sync; duplicates and lost entries tracked.
+No P0 data-loss defects.
+Coach workflow usability
+Coaches can create, assign, adjust and review plans without developer intervention.
+Qualitative pilot acceptance.
+Client check-in completion
+Daily and weekly check-in completion by pilot client.
+Establish baseline during pilot.
+Role isolation
+No coach can access another unassigned client or perform unauthorised cross-scope edits.
+Zero critical permission failures.
+Payment correctness
+Package access changes only after verified payment or admin approval.
+Zero false activations.
+App stability
+Crash-free sessions, sync failures and support issues.
+Agree thresholds before external rollout.
+3. Users, roles and access model
+Role
+Core responsibilities
+Access rule
+Client
+Complete onboarding; view assigned plans; log workouts/meals; submit check-ins; message coaches; book sessions; view package status.
+Access own account and own records only.
+Training coach
+Build and revise workout programmes; review training logs, performance, exercise form and training-related check-ins.
+Access assigned clients; edit training area; view shared client data.
+Nutrition coach
+Build meal plans; review food logs, meal adherence, hunger/digestion and nutrition check-ins.
+Access assigned clients; edit nutrition area; view shared client data.
+Dual-qualified coach
+Manage both training and nutrition when explicitly assigned both scopes.
+One staff account may hold both responsibility scopes for a client.
+Administrator
+Supervise staff, client assignments, all client records, packages, payments, operations and audit.
+Broad access to all business records; sensitive actions logged.
+System/service account
+Run scheduled messages, sync, webhook handling and background jobs.
+No interactive access; narrowly scoped service permissions.
+Coach assignment model
+A client can have a Training Coach and a Nutrition Coach simultaneously. A coach who is qualified and authorised for both disciplines may be assigned both scopes, so a second coach is not mandatory. Both coaches can access the shared client information confirmed in discovery: bodyweight, progress photos, recovery information and check-ins. Each coach edits their own responsibility area. Admin can supervise all client data.
+Open access detail  The trainer has not yet specified whether the training coach should have read-only visibility into the nutrition plan itself (and vice versa), beyond the named shared information. Default recommendation: deny cross-area editing; permit only a shared summary until the business approves broader read access.
+Permission rules required in code
+Enforce permissions on the backend/API, not only by hiding buttons in the UI.
+Assignment changes take effect immediately for future access; log who changed the assignment and when.
+Every coach action should be attributable to a staff account and responsibility scope.
+Administrators can view all records but should use named accounts, strong authentication and an audit trail.
+Progress photos and health/wearable records require clear disclosure and consent; access must be scoped and logged.
+A client can have one or two responsibility assignments, not an unbounded set of primary coaches per scope unless later approved.
+4. Application screen maps
+4.1 Client app - proposed navigation
+Area
+Screens / capabilities
+Home
+Today dashboard; workout due; daily check-in; package status; next live session; reminders; coach feedback.
+Training
+Current programme; calendar; workout detail; live workout logger; rest timer; exercise library; history; PRs; strength/volume charts.
+Nutrition
+Current meal plan; alternatives; macro targets; food diary; meal photo/text logger; barcode/label scanner; recipes and saved meals.
+Progress
+Weight trend; measurements; progress photos; weekly check-in; monthly comparison; recovery and lifestyle summary.
+Messages
+Coach conversations; text; voice note; photo/video attachments; exercise-form submission; meal/workout feedback.
+Sessions
+Available slots; booking; meeting link; reminders; reschedule/cancel; attendance history.
+Profile & settings
+Personal profile; notification preferences; time zone; health platform connection/permission status; privacy notice; account deletion request.
+4.2 FitPilot Coach - web dashboard
+Area
+Screens / capabilities
+Overview
+Business pulse; assigned-client list; overdue check-ins; missed workouts; pending messages; upcoming sessions; expiring packages.
+Clients
+Search/filter; client profile; assessment; shared timeline; coach assignments; notes (private/shared distinction open).
+Training workspace
+Programme builder; exercise library; templates; weekly schedule; workout history; PRs; progression and muscle-group analysis.
+Nutrition workspace
+Meal plan builder; food database; alternatives; macro targets; recipe builder; meal log review and corrections.
+Check-ins & progress
+Daily and weekly check-in review; measurements; photos; comparison; recovery; exercise-form video review.
+Messages
+Client threads; media; feedback on meals/workouts; message templates.
+Automations
+Trigger builder; client/group selection; template editor; schedule; pause/resume; run history.
+Calendar
+Availability; session booking; meeting links; reschedule/cancel; attendance and remaining allowance.
+Packages & payments
+Package builder; client-specific offers; entitlements; payment ledger; renewals; failed/overdue status; refunds.
+Content & settings
+Exercise and food content; staff accounts; permissions; notification settings; privacy and audit views.
+4.3 Admin workspace
+Staff directory and role assignment.
+Global client directory and coach assignment oversight.
+Business-wide package catalogue and payment monitoring.
+All-client data supervision, subject to consent, retention and audit safeguards.
+Automation and notification oversight.
+Data access, deletion requests, retention controls and audit events.
+Integration/provider configuration and service health.
+5. Feature register
+Priority describes the recommended delivery sequence, not the long-term importance of the capability. “P0” means needed for the controlled pilot or safe core operation; “P1” means early follow-on release; “P2” means later expansion. Items marked Open are not ready to be estimated as committed scope.
+ID
+Feature
+Decision status
+Priority
+Confirmed scope summary
+Open items
+C01
+Account and onboarding
+Keep + expand
+P0
+Invite-based pilot account; profile; goals; experience; equipment; availability; required comprehensive assessment; package status; notification settings; compliant deletion path.
+Exact required assessment fields; pre-purchase browsing.
+C02
+Workout plans and exercise demos
+Keep + change
+P0/P1
+Programme schedule, rest days, reusable templates, sets/reps/load/rest, searchable exercise library, cues and substitutions. Simple anatomical 3D demos are confirmed direction.
+3D asset pipeline, initial library size, and whether every published exercise must have 3D at pilot.
+C03
+Workout logging and progression
+Keep + expand
+P0
+Live logging; previous values; warm-up/working/drop/failure sets; supersets; RPE/RIR; timers; history; PRs; estimated 1RM; volume; offline sync.
+Exact e1RM formula, PR types and volume convention.
+C04
+Check-ins and body progress
+Keep + expand
+P0
+Daily check-in; weekly check-in; weight; measurements; photos; monthly comparison; sleep/energy/soreness; form-video submissions.
+Exact question sets, photo cadence, retention and consent wording.
+C05
+Adherence and daily support
+Keep + define
+P1
+Assigned vs completed workouts; meal logging/check-ins; reminders; coach feedback.
+Workout/nutrition adherence formulas, rest/illness/partial-session treatment.
+N01
+Nutrition plans and food diary
+Keep + expand
+P0
+Structured plans with alternatives plus flexible calorie/macronutrient targets; meal timing; saved meals; recipes; diary.
+Nutrition targets and units, recipe approval and food source licensing.
+N02
+Photo + description macro logger
+Keep + expand
+P1
+Photo/text input; suggested foods; confirm ingredients/oil/portion; editable estimate; trainer correction.
+Model/provider, confidence UX, supported local-dish coverage and cost.
+N03
+Traceable nutrition calculations
+Keep + expand
+P1
+Source and serving quantity; packaged food barcode; label scan; custom recipes and ingredient quantities. Custom client entries remain private.
+Database/API licence and coverage; source priority; barcode provider.
+H01
+Wearables and health dashboard
+Keep + phase
+P1
+HealthKit and Health Connect first; show available steps, sleep, workout duration/type, heart rate and trends; later direct device integrations.
+Pilot data types, platform parity, vendor API approvals and client device inventory.
+H02
+Data quality and permission
+Keep + strengthen
+P0
+Show source and last sync; separate imported/manual/calculated; deduplicate; missing data not zero; permission denial/revocation handling.
+Retention and deletion schedule; exact sync freshness thresholds.
+T01
+Client management and plan building
+Keep + expand
+P0
+Multi-coach responsibility assignments; client profiles; workout/nutrition templates; plan assignment/revision; attention list; reviews.
+Private notes, groups/tags, bulk assignment and cross-coach read access.
+T02
+Messaging and reviews
+Keep + expand
+P0/P1
+In-app text, voice notes, photo/video, form submissions, direct meal/workout feedback; no WhatsApp-first workflow.
+Read receipts, attachment limits, reply windows and after-hours policy.
+T03
+Trainer-controlled automations
+Keep + expand
+P1
+Coach-created templates; select client/group; trigger, timing and channel; pause/resume; run history.
+Approval-before-send option and per-client daily limits.
+T04
+Notifications and reminders
+Keep + expand
+P0/P1
+Push/in-app reminders; workout, meal, check-in, session, renewal and announcements; time zones and quiet hours.
+Daily cap, default quiet hours, delivery fallback.
+T05
+Live sessions and calendar
+Keep + change
+P1
+Online booking, availability, reminders, rescheduling/cancellation, external meeting links, attendance/history.
+Cancellation windows, buffers, no-shows and session-credit deduction.
+B01
+Package builder
+Keep + expand
+P0
+Standard and client-specific workout, nutrition, combined, live and complete packages; custom duration, price, inclusions, sessions, check-ins, support and instalments.
+Actual offers/prices, proration and package entitlements.
+B02
+Payments and renewal tracking
+Keep + phase
+P0/P1
+Manual ledger and verified activation; website/in-app route by SKU policy; UPI/cards/international/bank transfer; instalments, discounts, trials, refunds and expiry.
+Razorpay approval, in-app purchase classification, direct bank feed and international settlement.
+D01
+Privacy, access and ownership
+Keep + compliance override
+P0
+Client/staff permissions; admin supervision; explicit consent; secure media; audit; account deletion; health-source revocation handling; business ownership.
+Retention schedule and legal review.
+D02
+Migration and launch
+Change
+P0
+Fresh start; no Spur.fit migration; invite-only pilot of 5-10 clients; test both mobile platforms.
+Prototype access/code reuse; app distribution method and launch gates.
+X01
+Multi-coach assignment model
+New
+P0
+Client may have training + nutrition coach; dual-qualified coach may hold both scopes; admin supervises.
+Cross-area read access beyond shared summary.
+X02
+Anatomical 3D exercise library
+New
+P1
+Simple anatomical 3D exercise animations; owned/licensed assets; searchable and linked to programmed exercises.
+Asset vendor/production process, initial exercise count and per-exercise acceptance.
+X03
+Client consent and deletion controls
+New / mandatory
+P0
+Clear consent/notice, connection permissions, account deletion initiation and required external deletion URL.
+Legal retention, deletion SLA and exact policy copy.
+6. Detailed functional requirements
+6.1 Client identity and onboarding (C01)
+Pilot accounts should be invitation-led. Public discovery/signup is not approved for the pilot; confirm final self-signup model before public release.
+Client must complete a comprehensive baseline assessment before a coaching programme is activated.
+Assessment should capture profile, goals, training history, schedule/availability, equipment, injury/limitation disclosures, lifestyle, dietary preferences/restrictions, baseline weight/measurements and optional progress photos.
+Strength, mobility and conditioning tests are conducted by the coach in a one-to-one online consultation; FitPilot records the coach-entered outcomes. The app is not expected to run automated physical tests.
+An admin or assigned coach may identify missing required fields. A programme cannot be marked ready while required assessment fields remain incomplete.
+Client must see package status and assigned coach identities.
+6.2 Training and exercise library (C02/C03/X02)
+Programme builder supports days, exercises, sets, reps, load, rest, cues, rest days, templates and substitutions.
+Advanced set types: warm-up, working, drop and failure. Supersets are required. Circuits, tempo, timed exercises, warm-ups as blocks and other advanced constructs remain open unless separately approved.
+Workout logger shows previous-session values beside current targets; supports partial save, complete, interrupted and offline states.
+RPE/RIR are recorded per set or exercise; exact input granularity remains open.
+Rest timer may auto-start from the programmed rest interval and allow client adjustment; completion or skipping should not silently alter the programmed rest target.
+PRs, estimated 1RM, volume and weekly muscle-group volume are required. Formulae and muscle mapping must be documented and testable.
+Workout calendar and full session history are required. Offline sessions must retain timestamps and sync idempotently.
+Exercise demonstration direction is simple anatomical 3D. Every published exercise should have a trainer-approved demonstration; whether all pilot exercises require newly produced 3D assets is open.
+6.3 Nutrition and food logging (N01-N03)
+Nutritionist can create structured meal plans with quantities and alternatives and/or flexible macro targets.
+Client food diary supports actual food entries, meal timing and optional photos; hunger and digestion feedback are part of client monitoring.
+Food database target includes Indian and international foods and Kerala-specific meals/recipes.
+Barcode scan and label scan should identify a packaged food and show the matched item/source/serving where available.
+Custom recipes use ingredient quantities; custom food entries and recipes created for an individual client remain private to that client.
+Photo/text meal analysis proposes likely foods, asks about missing ingredients, cooking oil and portions, presents an estimate with uncertainty, and requires client confirmation/correction before saving.
+Nutrition calculations display source and serving quantity. Cronometer and MyFitnessPal are preferred potential sources only; integration access is not confirmed. USDA FoodData Central is a candidate fallback from the workbook.
+Nutrition coach can review/correct meal logs. Correction semantics (amend the old log vs future defaults) remain open.
+6.4 Progress and recovery (C04/H01/H02)
+Cadence
+Confirmed data
+Daily
+Steps and sleep where imported; meals and meal timing; energy; hunger; soreness; workout completion. Stress is part of the subjective lifestyle set. A short daily check-in should capture subjective items.
+Weekly
+Bodyweight trend; measurements where relevant; weekly progress check-in; workout/nutrition adherence; coach feedback.
+Monthly
+Progress photos; physique comparison; programme review.
+Shared overview
+Weight, progress photos, recovery and check-ins visible to both assigned coaches and the administrator.
+Show source, timestamp/last sync and status for imported metrics; identify manually entered and calculated values.
+No wearable data must be treated as zero or as client failure.
+Prevent duplicate workouts/steps when both manual and imported data refer to the same activity; exact deduplication approach is a technical design decision.
+Client may decline or revoke OS-level health permissions; app must continue useful manual workflows and explain missing data.
+6.5 Communication (T02)
+In-app one-to-one text messaging.
+Voice notes.
+Photo and video sharing.
+Exercise-form video submission and coach review.
+Direct feedback attached to workout and meal records.
+Video consultation scheduling using external meeting links; in-app video calling is not required for the pilot.
+Messages are associated with client and staff identities; media access is private and logged.
+6.6 Trainer operations and automations (T01/T03/T04/T05)
+Client list/search, profile, plans, templates, progress review and attention list for missed sessions/pending replies.
+Coaches can revise active programmes. Revision history must preserve who changed what and when; clients need a clear current plan and revision timestamp.
+Automations are coach-configurable: message template, target clients/groups, trigger, schedule/channel, pause/resume and delivery history.
+Initial triggers: welcome; incomplete assessment; overdue workout; missing daily check-in; overdue weekly check-in; no meal log; programme nearing completion; package renewal approaching; PR/milestone.
+Calendar supports trainer availability, one-to-one online booking, reminders, reschedule/cancel, external meeting link, attendance and session history.
+Client timezone, quiet hours, duplicate prevention and completion-based cancellation must be respected.
+6.7 Packages and payments (B01/B02)
+Package builder supports workout-only, nutrition-only, combined, live-coaching and complete packages; standard and client-specific offers.
+Configurable fields: price, currency, duration, start/expiry, session count, check-in frequency, support inclusion, payment schedule and service entitlements.
+Lifecycle operations: pause/resume, extension, upgrade/downgrade, instalments, discount codes, free trials, refunds/cancellations and automatic access suspension after expiry/non-payment.
+Purchase route may be in-app or website checkout depending on package classification and app-store rules. Store policy must be mapped per SKU; do not assume every combined/digital coaching offer is eligible for external checkout.
+Payment methods requested: UPI, debit/credit cards, international payments and bank transfers. Razorpay is preferred, subject to merchant activation and eligibility.
+Razorpay payment link/bank transfer and direct business bank transfer must both be considered. For direct bank transfer, automated notification to admin depends on an available verified bank feed/reconciliation provider; if unavailable, route to a pending manual verification queue.
+Payment confirmation email is sent to admin when a payment event is submitted/detected. Package entitlement changes only after server-side verification or explicit admin approval.
+No activation based only on client screenshots or unverified client claims.
+7. Core workflows and business rules
+7.1 New client onboarding
+1. Admin/coach creates invite and assigns package (or creates a pending purchase).
+2. Client accepts invite and creates account.
+3. Client completes required profile and comprehensive assessment.
+4. Client grants or declines relevant health-data permissions; manual alternatives remain available.
+5. Coach schedules a one-to-one video assessment and records strength/mobility/conditioning findings.
+6. Training and/or nutrition coaches are assigned to the client.
+7. Coaches create and review the programme/meal plan.
+8. Admin or authorised coach activates the package and programme after assessment and payment/approval conditions are met.
+7.2 Workout programming and delivery
+1. Coach creates a programme from scratch, a reusable template or a copy of an existing plan.
+2. Coach adds weekly schedule, rest days, exercises, set types, reps, load, rest, supersets, RPE/RIR targets and demonstrations.
+3. Coach publishes a version; the client sees the active plan and schedule.
+4. Client starts a session; previous values load; sets and rest timers are recorded.
+5. If offline, workout records are saved locally with unique identifiers and queued for sync.
+6. On sync, server reconciles idempotently and returns authoritative session state.
+7. Coach reviews history, PRs, e1RM, volume and notes; any programme revision creates a new version/audit event.
+7.3 Nutrition planning and meal logging
+1. Nutrition coach sets calorie/macronutrient targets and creates structured meal plan with alternatives.
+2. Client logs meal by search, barcode/label, photo/text or saved meal.
+3. Photo/text logger proposes foods and requests portion/ingredient/oil clarification.
+4. Client reviews and confirms or edits the proposed food and serving.
+5. App calculates macros from the matched, traceable food/recipe data and saves the confirmed log.
+6. Nutrition coach reviews and corrects entries; custom client entries remain private to that client.
+7.4 Coach collaboration
+1. Admin assigns training and nutrition responsibility scopes, possibly to two different coaches.
+2. If a dual-qualified coach is assigned both scopes, one account manages both areas.
+3. Each coach sees their own plan/work area plus shared bodyweight, progress photos, recovery and check-ins.
+4. Coaches coordinate using shared client context and in-app messages/feedback.
+5. Admin supervises all client records and can intervene; administrative access is auditable.
+7.5 Payment and package activation
+1. Client selects a package and eligible purchase route is determined by the package SKU and store policy.
+2. Website/in-app checkout creates a server-side order/payment record; provider callback is not treated as final proof by itself.
+3. Backend verifies captured/paid state with provider and validates webhook authenticity; idempotency prevents double activation.
+4. Razorpay bank transfer event or payment link event triggers admin email and payment ledger update.
+5. Direct bank transfer is matched through approved bank feed/reconciliation or placed in a pending manual verification queue.
+6. Admin can approve/reject a pending bank transfer with reason and audit entry.
+7. Only verified/approved payment activates the corresponding entitlement.
+8. Expiry, pause, extension, instalment failure, refund and cancellation update access based on configured package rules.
+7.6 Automation example
+Acceptance-style example  Given a client has an assigned workout due today, when the configured reminder time arrives and the workout remains incomplete, send the coach-approved template once in the client’s timezone. If the client completes the workout before the reminder time, cancel the queued reminder. If the package is paused, do not send it.
+8. Adherence, automation and notification rules
+8.1 Adherence definitions - proposed, pending trainer sign-off
+Metric
+Proposed definition
+Still requires decision
+Workout adherence
+Completed eligible assigned sessions divided by eligible scheduled sessions in the chosen period.
+What constitutes completion; partial sessions; illness; coach-cancelled sessions; client travel/pause.
+Nutrition adherence
+Use meal logs plus weekly client check-in against coach-defined targets; show coverage/completeness separately from target compliance.
+Whether score is based on logged meals, calorie/macros range, meal-plan servings or coach judgement.
+Rest days
+Exclude planned rest days from workout adherence denominator.
+How rescheduled sessions are handled.
+Missing wearable data
+Never count as zero activity or failure; display unavailable/stale.
+Stale threshold and reminder behaviour.
+Partial workout
+Store completed sets/exercises and label session partial; do not silently upgrade to complete.
+Whether coach can manually mark it complete and how it affects score.
+Offline session
+Count after sync based on recorded session state and original timestamp.
+Conflict rules if coach revised the plan while the client was offline.
+8.2 Automation matrix
+Trigger
+Target event
+Guardrails
+Client joins
+Welcome message
+Send once; only after account activation.
+Assessment incomplete
+Assessment reminder
+Stop on completion; respect quiet hours.
+Workout incomplete by time
+Workout reminder
+Cancel on completion; once per trigger window; suppress during pause.
+Daily check-in missing
+Daily check-in prompt
+Stop after submission; no duplicate.
+Weekly check-in overdue
+Weekly follow-up
+Stop after submission; coach can pause.
+No meal log
+Nutrition reminder
+Do not treat missing logs as confirmed non-adherence; configurable grace period.
+Programme nearing completion
+Programme-end notice
+Configurable lead time; stop if programme extended.
+Package renewal approaching
+Renewal reminder
+Stop after renewal/payment; respect pause and cancellation.
+PR/milestone achieved
+Achievement message
+Deduplicate the same event; coach template; do not expose publicly by default.
+8.3 Notification policy - proposed defaults need approval
+All scheduled events use the client’s local timezone.
+Client quiet hours and notification preferences are respected.
+Do not send duplicate reminders for the same event.
+Completion, cancellation, pause or renewal should cancel obsolete queued reminders.
+Provide in-app notification history and delivery status; push delivery is not guaranteed.
+Define maximum reminders/day, default quiet hours and coach approval rules before enabling production automations.
+9. Data model and system architecture constraints
+Core domain entities
+Domain
+Representative records / relationships
+Identity & organisation
+Organisation/workspace; user; client profile; staff profile; role; coach responsibility assignment; authentication session.
+Assessment & progress
+Onboarding assessment; coach fitness assessment; measurement; progress photo; daily check-in; weekly check-in; recovery observation; consent record.
+Training
+Exercise; muscle-group mapping; exercise asset; workout template; programme; programme version; day schedule; session; exercise log; set log; rest timer event; PR; e1RM record.
+Nutrition
+Food item; food source; recipe; recipe ingredient; meal plan; meal alternative; macro target; saved meal; food estimate; confirmed meal log; correction event.
+Health integrations
+Provider connection; permission state; sync cursor; health sample; imported workout; import provenance; last-sync timestamp.
+Communication
+Conversation; participant; message; attachment; feedback reference; message template; automation rule; trigger event; notification job; delivery record.
+Sessions & commerce
+Availability slot; booking; meeting link; attendance; package definition; package instance/entitlement; payment attempt; payment; invoice; instalment; refund; discount.
+Governance
+Audit event; data-retention policy; deletion request; access event; integration secret reference; provider webhook event.
+Architecture constraints for the implementation team
+Use one shared backend and a canonical API/domain model for iOS, Android and the trainer dashboard.
+Use backend-enforced role- and assignment-based access control. Admin privileges must be explicit and auditable.
+Use a relational source of truth for clients, staff, programmes, assignments, packages, payment states and audit history.
+Store photos, videos, voice notes and exercise media in private object storage; use access-controlled, time-limited delivery URLs.
+Use a background job/queue for reminders, webhooks, image/food processing and wearable sync. Jobs must be retry-safe and idempotent.
+Use a local mobile database/queue for workout logging offline; sync must not lose or duplicate records.
+Keep provider secrets on the server. Do not embed payment, nutrition or wearable API secrets in the mobile apps.
+Use versioned workout and nutrition plans; edits to active plans create a revision record.
+Use a provider-adapter layer so direct wearable and food providers can be added without redesigning the core domain.
+Use explicit source/provenance fields for imported, manual and calculated health/nutrition values.
+Provide observability for sync failures, webhook events, scheduled jobs, media processing and permission errors.
+Recommended implementation posture (not a locked stack)
+Have Codex inspect the existing prototype and repository before choosing or replacing frameworks. If no production stack exists, propose and justify a maintainable shared-codebase approach for iOS/Android, a web dashboard, a secure API, relational database, private media storage and background job service. Do not assume the clickable prototype’s simulated data/integrations are production-ready. Keep infrastructure and developer accounts under business control.
+10. Privacy, security and compliance requirements
+Material correction to the earlier preference  The trainer initially preferred not to offer client data downloads, wearable disconnection controls, photo permission controls or account deletion. Data export is not included as a normal product feature. However, account deletion and the ability to revoke health-data access cannot be omitted from the platform design. These are required by app-store policies and/or underlying operating-system permission controls.
+10.1 Minimum privacy controls
+Publish an accessible privacy policy inside the app and in store listings. Identify data collected, source, purpose, processors/third parties, retention and deletion process.
+Obtain clear consent/authorisation before collecting progress photos, health metrics or other sensitive personal data; describe which coaches and administrators can view them.
+Provide a way to initiate account deletion in the client app and a separate working web deletion-request path for Google Play listing requirements. Complete deletion except records that must be retained for lawful, security or fraud-prevention reasons; disclose retention.
+Provide an in-app connection/permission status and a clear route to OS settings. Clients may revoke HealthKit or Health Connect permissions at OS level; app must detect inaccessible/stale data and continue with manual entry.
+No advertising, unrelated marketing, or unrelated data mining using health/fitness data. Use data only for the disclosed coaching/product purpose and permitted service operations.
+Use encryption in transit and at rest; secure authentication; least privilege; staff access logs; private media storage; secret management; backup and incident response.
+Admin access to all records is a business requirement, but access must use named accounts and be auditable.
+No client-facing data export/download function is requested for the initial product. This does not remove any legal access rights or responses that may be required by applicable law.
+10.2 Platform and regulatory checks
+Area
+Requirement / impact
+Apple App Store
+Apps that support account creation must provide an in-app account-deletion initiation path. HealthKit access is permission-based by data type; users can revoke permissions in Settings/Health. Apple’s person-to-person service exception covers real-time one-to-one fitness training; one-to-few and one-to-many services have different IAP treatment.
+Google Play
+Apps that allow account creation must provide an in-app deletion path and a functional external web deletion resource. Google’s one-to-one online paid-services exception is limited to eligible real-time services between two individuals that are not replayable; digital plan/content packages require SKU-specific analysis.
+Health Connect
+Declare only required data permissions. Users grant/deny data-type permissions; background and historical reads can require additional permissions.
+India DPDP
+DPDP Act/Rules commencement is phased. The 13 Nov 2025 Gazette notification schedules the main set of provisions for 18 months after publication (approximately 13 May 2027). The pilot target is earlier, but the product should be designed for the upcoming obligations and reviewed by India-qualified counsel.
+Razorpay
+International cards require merchant activation and partner checks. Bank-transfer functionality via payment links is an on-demand feature for the relevant Razorpay flow. Confirm account eligibility and supported payment methods before committing.
+11. Prioritised release plan: P0 / P1 / P2
+P0 - controlled pilot foundation
+Invite-based accounts, client profile, mandatory comprehensive assessment and coach-entered one-to-one fitness assessment results.
+Web dashboard with staff/client management, role/assignment model and admin supervision.
+Training and nutrition programme creation, versioning and assignment.
+Core advanced workout logger: previous values, set types, supersets, RPE/RIR, rest timer, workout history, PR/e1RM/volume basics and offline save/sync.
+Nutrition plan with structured meals, alternatives, macro targets and manual/search-based meal logging.
+Daily and weekly check-ins; weight/measurements and progress photos with consent/visibility rules.
+In-app messaging baseline, client feedback and secure media attachments needed for coaching.
+Package definitions, client entitlement status and admin-managed payment ledger; verified payment activation path.
+Basic notifications; privacy policy, consent, OS health-permission handling, account deletion path and audit log.
+Fresh-data start; no Spur.fit migration.
+P1 - early production expansion
+3D anatomical exercise library and a curated initial high-frequency exercise asset set.
+HealthKit and Health Connect imports for agreed priority metrics; direct vendor integrations after feasibility review.
+Barcode and food-label scanning; photo/text meal recognition with human confirmation and traceable data sources.
+Coach-configurable trigger-based automations and advanced notification controls.
+Full online session booking workflow, external meeting links, attendance and cancellation/session allowance rules.
+Razorpay checkout/payment links/webhooks, instalments, refund handling and admin reconciliation improvements.
+Advanced progress and adherence dashboards after formulas are signed off.
+P2 - later roadmap
+Dedicated Apple Watch app; not planned for the near term.
+Expanded direct integrations for WHOOP, Garmin, Fitbit, Oura and other device-specific platforms where commercial/API access supports them.
+Broader AI meal recognition coverage, advanced analytics and additional automation channels.
+Optional home/travel mode, shortened workouts, programme pause/resume, AI programme generation, premade courses and WhatsApp/SMS only after separate approval.
+Scope caution  P0 is a proposed pilot scope to make the two-month milestone realistic. It is not a statement that every P0 item can be built, tested and approved by 4 January 2027. Estimate each feature with the development team and freeze a minimum demonstrable pilot slice.
+12. Integrations and external dependencies
+Integration
+Intended use
+Status / risk
+Recommended sequence
+Apple Health / HealthKit
+Read permitted steps, sleep, workouts, heart rate and related supported metrics.
+User permission required per data type; access may be revoked; availability varies by device and source.
+First mobile health integration for iOS; exact pilot data types to approve.
+Android Health Connect
+Read permitted Android health/fitness records.
+Only declared and granted data types; background/historical access can need additional permissions.
+First mobile health integration for Android.
+WHOOP / Garmin / Fitbit / Oura
+Additional recovery, sleep and training signals.
+Direct API access, scopes, commercial terms and user authorisation are unconfirmed.
+Later direct adapters when Health platforms do not expose required metrics.
+Razorpay domestic
+UPI/cards/payment links/eligible bank transfer; webhooks.
+Merchant KYC, product activation, webhook validation and fee/support terms.
+Pilot with manual ledger fallback; then verified server integration.
+Razorpay international
+International cards and possibly international bank transfers.
+Requires activation/eligibility and provider approval; not guaranteed.
+Verify merchant onboarding before selling internationally through platform checkout.
+Direct bank feed
+Detect direct transfers to business bank account and notify admin.
+No specific bank or reconciliation API selected; access/consent/coverage unknown.
+Open dependency; if not available, admin manual verification queue.
+FoodData Central / local food DB
+Traceable food nutrients and recipe calculations.
+USDA is candidate fallback; Indian/Kerala coverage and licensing need validation.
+Define primary/secondary food source and local data plan.
+Cronometer / MyFitnessPal
+Potential nutrition data sources.
+Workbook labels these preferred potential sources, not confirmed integrations.
+Do not assume API access; seek permission/terms.
+Barcode/label recognition
+Packaged food data and nutrition label parsing.
+Needs provider/database coverage and accuracy tests for Indian products.
+P1 discovery and proof of concept.
+Meal photo AI
+Suggest foods, portions and macros.
+Portion, ingredients and cooking oil remain uncertain; model/API cost and privacy need review.
+P1; estimates must be confirmed by client.
+External video meetings
+Schedule and store meeting URL for coach-client sessions.
+Provider not chosen; meeting link security/retention must be considered.
+P1; external link support first.
+Push notifications
+Workout/check-in/renewal/session reminders.
+APNs/FCM configuration, delivery and permission behaviour.
+Basic P0 notifications; advanced orchestration P1.
+13. Content and launch asset checklist
+Asset group
+Required material
+Exercise library
+Exercise names, movement pattern, primary/secondary muscles, equipment, cues, common mistakes, regressions/substitutions, trainer approval.
+3D exercise media
+Simple anatomical 3D model style; looping clip; camera angle; start/end positions; correct range; muscle highlight policy; captions/labels; owned/licensed rights; initial exercise shortlist.
+Workout templates
+Starter templates for transformation and strength/conditioning; deload examples; warm-ups; rest-day patterns; approved exercise substitutions.
+Nutrition content
+Indian and Kerala food items, raw/cooked state, household measures and gram weights, recipe ingredients, cooking method, oil quantity, macro source and serving size.
+Food data/legal
+Database/API licences; attribution requirements; barcode data provider; label parser; photo-AI provider terms and data processing terms.
+Onboarding forms
+Required questions, optional questions, consent copy, injury/limitation wording, dietary/allergy questions, photo instructions.
+Check-in forms
+Daily subjective check-in; weekly review; monthly progress/photo review; pain/fatigue escalation rules.
+Message templates
+Welcome; incomplete assessment; workout reminder; check-in reminder; meal reminder; programme end; renewal; PR/milestone.
+Business content
+Package names, real prices, durations, entitlements, refund/cancellation policy, instalment rules, discounts and trial policy.
+Privacy/legal
+Privacy policy, terms, consent notices, retention schedule, account deletion page, support contact, processor list, breach response workflow.
+Store launch
+App name/description, screenshots, icon, support URL, privacy URL, demo account/reviewer instructions, permission purpose strings, data safety disclosures.
+Operations
+Staff accounts, role matrix, admin owner, business email, domain, hosting accounts, payment merchant accounts, backups and escalation contacts.
+14. Two-month pilot plan and exit criteria
+The requested pilot target is 4 January 2027, with 5-10 existing clients, and iOS and Android available at the same time. This is an aggressive target. Store review, app signing, provider activation, media asset production and security testing are external or schedule-sensitive dependencies. Treat the date as a target, not a delivery guarantee.
+Phase
+Indicative window
+Focus / gate
+A. Technical discovery
+4-10 Nov 2026
+Inspect prototype/repository; select production architecture; freeze P0 slice; confirm developer accounts, data model, design system, provider feasibility and costs.
+B. Foundation
+11-24 Nov 2026
+Authentication; roles/assignments; backend schema; invite flow; client onboarding; coach/admin shell; private media storage.
+C. Coaching core
+25 Nov-8 Dec 2026
+Programme builder; exercise library baseline; workout logger; offline local storage/sync; nutrition plan; meal diary; check-ins.
+D. Operations
+9-22 Dec 2026
+Client messaging; media; package ledger; booking basics; reminders; consent/deletion; admin supervision and audit.
+E. Hardening
+23-30 Dec 2026
+iOS/Android device tests; role/security tests; sync tests; data backup; analytics; pilot staff training; content seed.
+F. Pilot readiness
+31 Dec 2026-4 Jan 2027
+Deploy production-like backend; invite 5-10 pilot clients; support channel; daily issue triage; go/no-go sign-off.
+Pilot entry criteria
+Both iOS and Android builds install and authenticate on the target test devices.
+All pilot users are invited; no public signup dependency.
+Client has assigned coach scope(s), completed onboarding, and sees the correct programme/package.
+Workout log works online and offline; no lost/duplicate set entries in tested cases.
+Coach and admin permissions pass negative access tests.
+Nutrition plan and meal diary work with manual/source-backed entries; photo AI may remain P1.
+Privacy policy, consent, account-deletion paths and health-permission handling are available.
+Payment status can be recorded and verified by the admin; no unverified payment automatically activates access.
+Pilot exit criteria
+No unresolved critical security or cross-client data exposure issue.
+No unresolved P0 workout data-loss or duplicate-write issue.
+All pilot clients can complete the core onboarding-to-coaching workflow.
+Coaches can review training/nutrition and shared progress information without permission leakage.
+Admin can inspect package, assignment, check-in and payment status.
+Top pilot feedback items are triaged into P0 fixes, P1 improvements or rejected scope.
+15. Open decisions and risks
+ID
+Decision
+Status
+Risk
+What must be decided
+O01
+Build budget and monthly operating ceiling
+Open
+High
+No build budget or monthly run-cost ceiling supplied. Prepare estimates for MVP and full roadmap separately.
+O02
+Existing prototype/repository and stack
+Open
+High
+Vidhul must provide repo/prototype access; inspect what is reusable and what is simulated.
+O03
+Account creation model after pilot
+Open
+Medium
+Pilot likely invite-only; public signup/browse-before-buy is undecided.
+O04
+Comprehensive assessment field list
+Open
+High
+Agree required vs optional questions, consent language and who can edit after submission.
+O05
+Training completion definition
+Open
+High
+Define partial, interrupted, skipped, missed, illness and coach-rescheduled sessions.
+O06
+Nutrition adherence formula
+Open
+High
+Agree whether based on target ranges, plan adherence, food logging completeness or coach assessment.
+O07
+Workout analytics formulae
+Open
+Medium
+Choose e1RM equation(s), PR categories, volume convention and muscle-volume counting rules.
+O08
+Cross-coach read access
+Open
+Medium
+Decide if each coach can read the other coach’s detailed plan or only shared client summary.
+O09
+3D exercise asset production
+Open
+High
+Select tool/vendor/creator, IP ownership, style and pilot library size; no production budget set.
+O10
+Food source and licensing
+Open
+High
+Confirm API/data rights, Indian/Kerala coverage, source hierarchy and update cadence.
+O11
+Food photo recognition provider
+Open
+High
+Select model/provider and define confidence/uncertainty, privacy, cost and confirmation UX.
+O12
+Wearable pilot metrics
+Open
+Medium
+Choose exact iOS/Android data types and minimum freshness; identify brands/models already used by clients.
+O13
+Razorpay activation and SKU policy
+Open
+High
+Complete merchant KYC/activation; classify each package for Apple/Google checkout rules.
+O14
+Direct bank transaction detection
+Open
+High
+Select bank/account and verify bank feed or reconciliation provider. Fallback is manual admin verification.
+O15
+Refund/upgrade/proration policy
+Open
+High
+Define treatment of used sessions, partial periods, upgrade price differences, refunds and failed instalments.
+O16
+Booking rules
+Open
+Medium
+Set buffers, cancellation window, reschedule limits, no-show handling and session-credit deduction.
+O17
+Automation safety defaults
+Open
+Medium
+Set quiet hours, max reminders/day, grace periods, per-coach approval and time zone fallback.
+O18
+Data retention and deletion
+Open
+High
+Legal review: photos, logs, health data, financial records, backups and third-party deletion.
+O19
+Staff private notes and groups
+Open
+Low
+Decide tags/groups, bulk assignment and whether private coach notes are needed.
+O20
+Exercise programming edge cases
+Open
+Medium
+Decide tempo, circuits, timed sets, warm-up blocks, drop-set structure, deload scheduling details.
+O21
+International client payments
+Open
+High
+Razorpay approval, foreign currency/settlement, taxes and country-specific consumer/payment obligations.
+O22
+3rd party meeting provider
+Open
+Low
+Choose calendar/video provider and privacy/access requirements for meeting URLs.
+O23
+App store release route
+Open
+High
+Confirm developer accounts, TestFlight/Play testing tracks, review schedule and public release timing.
+O24
+Exercise video publishing rule
+Open
+Medium
+Confirm whether a demonstration is mandatory for every exercise before publish and whether P0 can use licensed interim media.
+16. Implementation brief for Codex
+16.1 Instruction block
+Codex operating instruction  Build only from this approved requirements baseline and the latest human-approved decisions. First inspect the existing repository/prototype. Do not assume simulated integrations are live. Do not add optional features without approval. Do not invent package prices, formulas, provider access, legal approvals or delivery guarantees.
+16.2 Required build outputs
+Architecture proposal: mobile app strategy, trainer web dashboard, API/backend, database, media storage, background jobs, notifications, integration adapters and deployment.
+Domain model and entity relationship diagram, including responsibility-scope coach assignment and auditable admin access.
+Role and permission matrix with server-enforced checks and automated negative tests.
+API contract for client, coach, admin, workout logging, food logs, messages, bookings, packages, payments, notifications and integrations.
+Working iOS and Android pilot client apps and responsive web trainer/admin dashboard.
+Offline workout storage/sync design with idempotency, conflict handling and tests.
+Payment state machine and secure webhook processing; no entitlement activation from unverified client-side callbacks.
+Privacy, consent, account deletion, provider permission and audit workflows.
+Automated unit, integration, end-to-end, permission and sync tests; test data fixtures; deployment/runbook documentation.
+App store submission checklist and pilot support/rollback plan.
+16.3 Architecture acceptance constraints
+Concern
+Required behaviour
+Identity
+Unique accounts; secure authentication; admin-created/invite flow for pilot; account deletion request pathway.
+RBAC
+Training, nutrition and admin scopes; one staff account may hold both coaching scopes; backend checks for every record.
+Client isolation
+A coach cannot enumerate or fetch an unassigned client’s data by changing an ID or API request.
+Plan revision
+Published plans are versioned; client history remains interpretable after edits.
+Offline logging
+Client can start/log/save session offline, restart app, reconnect and sync once without losing/duplicating sets.
+Data provenance
+Imported/manual/calculated data fields include source, timestamp and sync state.
+Media
+Private objects; signed access; file type/size limits; virus/malware scanning where appropriate; retention/deletion handling.
+Payments
+Provider signature verification, server-side status confirmation, idempotent webhooks, auditable admin overrides.
+Automation
+Jobs are idempotent; obsolete reminders cancelled; quiet hours/timezone; run history and failure handling.
+Observability
+Logs and alerts for failures; do not log secrets or unnecessary sensitive data.
+Ownership
+Business-controlled code repository, cloud account, domain, Apple/Google developer accounts, payment accounts and backups.
+16.4 Suggested delivery sequence
+1. Stage 1: repository/prototype audit, architecture decision record, data model, permission model and P0 definition.
+2. Stage 2: authentication, business workspace, staff and client records, coach assignments, onboarding and consent.
+3. Stage 3: programme builder, exercise content, live logger, offline persistence/sync and workout history.
+4. Stage 4: nutrition plan, meal diary, daily/weekly progress and coach reviews.
+5. Stage 5: messaging/media, package ledger, basic booking and notification workflow.
+6. Stage 6: security/permission audit, device QA, data backup, pilot release channels and monitoring.
+7. Stage 7: P1 integrations, photo-food analysis, 3D content expansion, Razorpay automation and advanced analytics.
+16.5 Definition of done
+Acceptance tests pass on iOS, Android and web surfaces as applicable.
+Role permissions are tested positively and negatively.
+Sensitive actions are logged.
+No critical or high-severity data-loss, payment, privacy or access-control defect remains open for pilot.
+External integrations are marked simulated, sandbox or production accurately; no mock state is presented as live.
+Operational documentation, rollback plan, backup/restore test and support escalation owner exist.
+17. Acceptance test catalogue
+Test ID
+Area
+Given / When / Then acceptance criterion
+AT-01
+Onboarding
+Given an invited client with missing required assessment fields, when they attempt programme activation, then activation is blocked and the missing fields are identified.
+AT-02
+Assessment
+Given a completed assessment, when the assigned coach opens the profile, then baseline answers and submission timestamp are visible.
+AT-03
+Fitness assessment
+Given a scheduled one-to-one consultation, when the trainer records strength/mobility/conditioning results, then the results are stored against the client assessment with author and date.
+AT-04
+Coach assignment
+Given a client assigned to a training coach and a nutrition coach, when each logs in, then each sees the assigned client and shared client context.
+AT-05
+Dual-qualified coach
+Given one coach is assigned both training and nutrition scopes, when that coach opens the client, then both work areas are available without creating duplicate client accounts.
+AT-06
+Access isolation
+Given Coach A is not assigned to Client B, when Coach A requests Client B through a direct URL/API identifier, then access is denied and logged.
+AT-07
+Admin supervision
+Given an authenticated administrator, when they open a client record, then authorised supervisory data is visible and the access event is auditable.
+AT-08
+Programme version
+Given a published programme, when a coach edits an active programme, then a new revision is created and prior revision remains in history.
+AT-09
+Previous session
+Given a client has a prior logged session, when they start the next matching workout, then the prior set values are displayed for reference.
+AT-10
+Set type
+Given a workout includes warm-up, working, drop and failure sets, when the client logs them, then the set type is preserved in history and analytics.
+AT-11
+RPE/RIR
+Given RPE/RIR tracking is enabled for a set, when the client submits the set, then the selected rating is saved with that set.
+AT-12
+Rest timer
+Given a set has a programmed rest period, when the set is completed, then the rest timer starts and can be adjusted or skipped by the client.
+AT-13
+Offline log
+Given the device is offline, when a client logs and saves a workout then restarts the app, then the local session and set data remain available.
+AT-14
+Offline sync
+Given an offline session is queued, when connectivity returns, then each record syncs once and the server does not create duplicates.
+AT-15
+PR/e1RM
+Given a logged set meets the approved PR/e1RM rule, when the session syncs, then the correct record is calculated and visible with the formula/version used.
+AT-16
+Adherence rest day
+Given a day is a planned rest day, when weekly adherence is calculated, then the rest day is excluded from scheduled-workout denominator.
+AT-17
+Missing wearable data
+Given a wearable permission is denied or sync is stale, when the dashboard is viewed, then data is labelled unavailable/stale and not recorded as zero or failure.
+AT-18
+Nutrition plan alternatives
+Given a meal plan includes alternatives, when the client views the meal, then approved alternatives and quantities are shown.
+AT-19
+Food estimate confirmation
+Given a client submits a meal photo, when the system proposes food and macros, then the client can edit/confirm before the meal is saved as final.
+AT-20
+Private custom food
+Given Client A creates a custom food/recipe, when Client B searches the shared food catalogue, then Client B cannot see Client A’s private entry.
+AT-21
+Meal feedback
+Given a nutrition coach comments on a meal log, when the client opens that meal, then the feedback is attached to the correct meal record.
+AT-22
+Messaging media
+Given a coach sends an authorised photo/video/voice note, when the client opens the thread, then the attachment is viewable only to thread participants and authorised admin.
+AT-23
+Reminder cancel
+Given a workout reminder is queued, when the client completes the workout before send time, then the reminder is cancelled and not sent.
+AT-24
+Pause suppression
+Given a package/programme is paused, when its configured workout reminder time arrives, then the reminder is suppressed.
+AT-25
+Timezone
+Given a client timezone differs from the trainer timezone, when a scheduled reminder/booking is displayed, then it uses the client’s configured local time correctly.
+AT-26
+Booking
+Given a client books an available slot, when the booking is confirmed, then the client and coach see the booking and external meeting link.
+AT-27
+Payment webhook
+Given a verified captured-payment webhook is received, when it is processed twice, then the payment is recorded once and the entitlement activates once.
+AT-28
+Unverified payment
+Given a client submits a transfer claim without a matching bank/provider event, when the record is received, then the package remains pending and admin is notified for verification.
+AT-29
+Expiry
+Given a package reaches expiry without an extension or grace period, when the expiry job runs, then the entitlement changes according to configured access-suspension rules and the event is logged.
+AT-30
+Account deletion
+Given a client requests deletion, when identity is verified and the request is confirmed, then the deletion workflow starts, external processors are included where required, and legally retained records are disclosed.
+AT-31
+Health permission revoke
+Given a client revokes HealthKit/Health Connect access at OS level, when FitPilot next syncs, then it stops inaccessible reads and presents a manual-data alternative.
+AT-32
+Photo consent
+Given a client has not consented to progress-photo sharing/processing, when a coach tries to access an optional photo feature, then the app blocks collection/sharing and explains the consent requirement.
+18. Source basis and external references
+18.1 Primary project source
+FitPilot Trainer Planning Workbook / Draft 01 / 04 Nov 2026 / 9 pages. This requirements specification preserves the workbook feature identifiers and adds the trainer’s discovery decisions. The workbook’s stated baseline is not treated as a production implementation or as proof of live integration access.
+Workbook pages 1-2: product objective, prototype limitations, priorities, client experience and workout tracking.
+Workbook pages 3-4: nutrition, wearable integrations, data quality, trainer operations, messaging, automations and live sessions.
+Workbook pages 5-7: packages, payments, privacy, migration, discovery input and feature-card process.
+18.2 External references checked 4 November 2026
+Reference
+URL
+Relevance
+Apple App Review Guidelines
+https://developer.apple.com/app-store/review/guidelines/
+Account deletion, privacy/consent, HealthKit and person-to-person service payment treatment.
+Apple account deletion guideline reference
+https://developer.apple.com/help/app-review/guideline-reference/5-1-1-account-deletion/
+Apps supporting account creation must allow users to initiate account deletion in-app.
+Apple HealthKit permissions
+https://developer.apple.com/documentation/Xcode/configuring-healthkit-access
+Fine-grained data access; user can revoke permission in Settings or Health.
+Google Play account deletion policy
+https://support.google.com/googleplay/android-developer/answer/13327111
+In-app and external deletion request routes for apps that support account creation.
+Google Play payments policy
+https://support.google.com/googleplay/android-developer/answer/10281818
+One-to-one paid online service exception conditions; digital services may require Play Billing.
+Android Health Connect data types
+https://developer.android.com/health-and-fitness/health-connect/data-types
+Declared permissions, data types, and additional background/historical read permissions.
+Razorpay international payment docs
+https://github.com/razorpay/markdown-docs/blob/master/payments/international-payments.md
+International payment activation for Indian businesses and available international payment methods.
+Razorpay bank transfer via payment links
+https://razorpay.com/docs/payments/payment-links/bank-transfer/
+Bank-transfer payment link functionality and on-demand activation.
+Razorpay payment webhooks
+https://github.com/razorpay/markdown-docs/blob/master/webhooks/payments.md
+Payment captured/failed events and webhook-based status updates.
+India DPDP commencement notification G.S.R. 843(E)
+https://egazette.gov.in/WriteReadData/2025/267647.pdf
+Phased commencement of the Digital Personal Data Protection Act provisions.
