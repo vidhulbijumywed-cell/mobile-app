@@ -3,6 +3,7 @@ import { SafeAreaView, ScrollView, View, Text, TextInput, Pressable, StyleSheet,
 import WorkoutLogger from './WorkoutLogger';
 import PrototypeClient from './PrototypeClient';
 import GuidedAssessment from './GuidedAssessment';
+import release from './release.json';
 import { cacheProgramme, lastClient, rememberClient, forgetClient } from './offline/log';
 const API = process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://127.0.0.1:3001');
 // Provisional optional draft fields only. No activation or approved clinical assessment is implied.
@@ -166,7 +167,7 @@ export default function App() {
     })} />;
   }
   return <SafeAreaView style={styles.screen}><KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-    <View style={styles.brand}><Text style={styles.wordmark}>fitpilot→</Text><Text style={styles.tagline}>Your next stronger.</Text></View>
+    <View style={styles.brand}><Text style={styles.wordmark}>fitpilot→</Text><Text style={styles.tagline}>Your next stronger. · {release.name}</Text></View>
     <View style={styles.notice}><Text style={{
             fontSize: 11,
             color: '#74816e'

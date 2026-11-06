@@ -13,7 +13,7 @@ npm run demo
 
 When the terminal reports “FitPilot demo ready”, open your browser at `http://127.0.0.1:3001` (on the same computer). The landing page has buttons for the client app and trainer dashboard.
 
-The first run starts the local PostgreSQL container when necessary, creates an isolated fitpilot_demo database schema, seeds fictional accounts and builds the client if a bundled demo export is absent. Docker needs Internet access to pull its pinned PostgreSQL image; npm needs registry access for installation. The archive includes the tested client bundle. Fresh GitHub checkouts build it automatically. If you edit the client, remove its generated apps/mobile/dist-demo directory to rebuild on the next demo start.
+The first run starts the local PostgreSQL container when necessary, creates an isolated fitpilot_demo database schema, seeds fictional accounts and builds the client if a bundled demo export is absent. Docker needs Internet access to pull its pinned PostgreSQL image; npm needs registry access for installation. The archive includes the tested client bundle. Fresh GitHub checkouts build it automatically. The launcher fingerprints client sources and the dependency lockfile. When either changes, it rebuilds the client automatically.
 
 ## Fictional sign-ins
 
@@ -54,8 +54,14 @@ The demo deliberately leaves programme activation blocked. Payments, wearables, 
 
 After sign-in the original prototype-inspired Today screen opens. Use **Assessment** in the header to edit/save your draft. Use **Train** (or **Start your workout**) to open the workout preview and practice logger. Nutrition, Progress and Coach include labelled design-preview interactions; they do not imply live nutrition, wearable, booking or message integrations.
 
-If you already ran an older version, delete only the generated `apps/mobile/dist-demo` folder before running `npm run demo` again. This rebuilds the client without deleting PostgreSQL or your local workout records. Do not remove database volumes or browser storage to update the interface.
+If you already ran an older version, stop its terminal with Ctrl-C first, then run `npm run demo` in the updated folder. Stale bundles are rebuilt automatically. Do not remove database volumes or browser storage to update the interface.
 
 ## Guided experience
 
 Today now highlights your next workout. Profile opens a three-step conversation with optional quick choices and Save & finish later. Train starts a focused session: log one set, rest if needed, then move to the next set/exercise. Use Sync now to share saved sets with your coach. Session history is collapsed until opened. Starting another session preserves the old one and asks for confirmation.
+
+## Verify the current version
+
+The updated client and sign-in screens show **UX refresh 2**. The launcher page displays the release plus a short source fingerprint. Open the client directly at `http://127.0.0.1:3001/client` and refresh with Ctrl+F5 after restarting the server. `/demo-version` reports the running release and client fingerprint as JSON. If the marker is missing, an older server/folder is still serving the page.
+
+Startup now rejects an occupied port 3001 with instructions to stop the old terminal; it does not kill other processes. Existing build output without a matching source fingerprint is rebuilt with Metro's cache cleared. Source updates never require deleting client logs, browser storage or database volumes.

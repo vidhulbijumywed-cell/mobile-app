@@ -3,10 +3,13 @@ import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
 try{
  const context=await browser.newContext();const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const version=await (await context.request.get('http://127.0.0.1:3001/demo-version')).json();
+ assert.equal(version.version,'UX refresh 2');
  await page.goto('http://127.0.0.1:3001');await page.getByText('Demo accounts',{exact:true}).waitFor();
  if(process.env.DEMO_SCREENSHOT_DIR) await page.screenshot({path:process.env.DEMO_SCREENSHOT_DIR+'/fitpilot-demo.png',fullPage:true});
  await page.goto('http://127.0.0.1:3001/client');
  await page.getByLabel('Email',{exact:true}).fill('client@fitpilot.test');await page.getByLabel('Password',{exact:true}).fill('FitPilotDemo2026!');await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await page.getByText('FITPILOT / YOUR SPACE · UX refresh 2',{exact:true}).waitFor();
  await page.getByText('Foundation practice workout',{exact:true}).first().waitFor();
  if(process.env.DEMO_SCREENSHOT_DIR) await page.screenshot({path:process.env.DEMO_SCREENSHOT_DIR+'/fitpilot-prototype-home.png',fullPage:true});
 

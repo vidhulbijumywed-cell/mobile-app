@@ -1,12 +1,19 @@
 import { createServer } from 'node:http';
-import { readFile, access } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { resolve, extname, relative, isAbsolute, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import pg from 'pg';
 import { Service, passwordHash } from '../apps/api/service.js';
 import { createApi } from '../apps/api/server.js';
+import { readBuildInfo, stampBuild } from './demo-build.js';
 if (process.env.NODE_ENV === 'production') throw new Error('Fictional local demo only');
+// Refuse to hide a new build behind an older server already listening on this port.
+await new Promise((resolve,reject)=>{
+  const probe=createServer();
+  probe.once('error',error=>reject(new Error(error.code==='EADDRINUSE'?'Port 3001 is already in use. Stop the old FitPilot terminal with Ctrl+C, then run npm run demo in the updated folder.':error.message)));
+  probe.listen(3001,'127.0.0.1',()=>probe.close(resolve));
+});
 const connectionString = process.env.DATABASE_URL || 'postgres://postgres:fitpilot-local-only@127.0.0.1:54329/fitpilot';
 const root = new pg.Pool({ connectionString });
 try { await root.query('SELECT 1'); } catch (error) {
@@ -27,15 +34,19 @@ await pool.query("INSERT INTO assignments VALUES($1,$2,'training') ON CONFLICT D
 await pool.query('INSERT INTO assessments(client_id,answers) VALUES($1,$2) ON CONFLICT DO NOTHING',[client,{displayName:'Alex (fictional)',goal:'Build a consistent training routine',trainingHistory:'Beginner',availability:'Three evenings each week',equipment:'Bodyweight and dumbbells',dietaryPreferences:'Vegetarian'}]);
 await pool.query('INSERT INTO programme_revisions(client_id,revision,title,exercises,created_by) VALUES($1,1,$2,$3,$4) ON CONFLICT DO NOTHING',[client,'Foundation practice workout',JSON.stringify([{id:'exercise-1',name:'Chair squat',sets:2,reps:8,restSeconds:60},{id:'exercise-2',name:'Wall push-up',sets:2,reps:10,restSeconds:60}]),coach]);
 const web=resolve('apps/mobile/dist-demo');
-try { await access(resolve(web,'index.html')); } catch {
+const buildInfo=await readBuildInfo(process.cwd());
+if(buildInfo.needsBuild) {
+  console.log('Client build is missing or outdated; rebuilding '+buildInfo.version+'…');
   const expoCli=fileURLToPath(import.meta.resolve('expo/bin/cli'));
   const built=spawnSync(process.execPath,[expoCli,'export','--platform','web','--output-dir','dist-demo','--clear'],{cwd:resolve('apps/mobile'),stdio:'inherit',env:{...process.env,CI:'1',EXPO_NO_TELEMETRY:'1',EXPO_OFFLINE:'1',EXPO_PUBLIC_API_URL:'/api'}});
   if(built.error) throw new Error(`Could not start Expo: ${built.error.message}`, {cause:built.error});
   if(built.status!==0) throw new Error(`Demo client bundle failed (exit ${built.status}, signal ${built.signal || 'none'}). See the build output above.`);
+  await stampBuild(process.cwd(),buildInfo);
 }
 const api=createApi(new Service(pool));
 const server=createServer(async(req,res)=>{
   const path=new URL(req.url,'http://localhost').pathname;
+  if(path==='/demo-version') {res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');res.end(JSON.stringify({version:buildInfo.version,clientBuild:buildInfo.sourceHash.slice(0,12)}));return;}
   if(path==='/api'||path.startsWith('/api/')) { req.url=req.url.slice(4)||'/'; api.emit('request',req,res); return; }
   if(/^\/(coach|auth|invitations|assignments|clients|me|directory|workout-sets)(\/|$)/.test(path)) { api.emit('request',req,res);return; }
   try {
@@ -45,8 +56,9 @@ const server=createServer(async(req,res)=>{
     else if(path.startsWith('/_expo/')) { file=resolve(web,'.'+decodeURIComponent(path));const child=relative(web,file);if(isAbsolute(child)||child==='..'||child.startsWith('..'+sep)){res.writeHead(403).end();return;} }
     else {res.writeHead(404).end();return;}
     const extension=extname(String(file));res.setHeader('Content-Type',extension==='.js'?'text/javascript':extension==='.css'?'text/css':'text/html');res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
-    res.end(await readFile(file));
+    const data=await readFile(file);
+    res.end(path==='/'?data.toString().replace('{{DEMO_BUILD}}',buildInfo.version+' · '+buildInfo.sourceHash.slice(0,12)):data);
   } catch {res.writeHead(404).end();}
 });
-server.listen(3001,'127.0.0.1',()=>console.log('FitPilot demo ready on loopback port 3001. Open the root page for the client and coach entry points. Fictional data only.'));
+server.listen(3001,'127.0.0.1',()=>console.log('FitPilot demo ready on loopback port 3001. Open /client and look for UX refresh 2. Fictional data only.'));
 for(const signal of ['SIGINT','SIGTERM']) process.on(signal,()=>server.close(async()=>{await pool.end();try{await root.end();}catch{}process.exit(0);}));

@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Modal, StyleSheet, useWindowDimensions, SafeAreaView } from 'react-native';
 import { Icon, WorkoutArt } from './ui/Visuals';
+import release from './release.json';
 const pages = ['Today', 'Train', 'Nutrition', 'Progress', 'Coach'];
 const icons = {
   Today: '◈',
@@ -217,7 +218,7 @@ export default function PrototypeClient({
       }]} keyboardShouldPersistTaps="handled"><View style={s.top}><View><Text style={{
               fontWeight: '700',
               color: '#202b27'
-            }}>FITPILOT / YOUR SPACE</Text><Muted>{new Date().toLocaleDateString(undefined, {
+            }}>FITPILOT / YOUR SPACE · {release.name}</Text><Muted>{new Date().toLocaleDateString(undefined, {
                 weekday: 'long',
                 month: 'long',
                 day: 'numeric'

@@ -7,7 +7,7 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "test": "node packages/domain/test/training.test.ts",
+    "test": "node packages/domain/test/training.test.ts && node test/demo-build.test.js",
     "test:api": "node test/api.test.js",
     "dev:api": "node apps/api/main.js",
     "db:migrate": "node apps/api/migrate.js",
