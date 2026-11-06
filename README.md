@@ -41,3 +41,7 @@ Local practice-session logging and retry-safe set sync are now available. See [o
 ## Try the connected working model
 
 With Node.js 24 and Docker running: `npm ci`, then `npm run demo`. See [DEMO.md](DEMO.md) for fictional sign-ins and the complete walkthrough. The command seeds an isolated demo schema and serves the client and coach dashboard together on loopback port 3001.
+
+## Original prototype integrated
+
+The client now uses the uploaded prototype's green/lime design and Today, Train, Nutrition, Progress and Coach navigation, connected to the existing authentication, assessment and practice-workout backend. Unimplemented provider features remain clearly labelled design previews. See [prototype integration details](docs/PROTOTYPE-INTEGRATION.md).

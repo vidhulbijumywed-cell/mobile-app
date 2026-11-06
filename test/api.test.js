@@ -172,12 +172,14 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
             await mobile.getByLabel('Email', { exact: true }).fill('mobile@example.test');
             await mobile.getByLabel('Password', { exact: true }).fill(password);
             await mobile.getByRole('button', { name: 'Sign in', exact: true }).click();
+            await mobile.getByRole('button',{name:'Assessment',exact:true}).click();
             await mobile.getByLabel('What would you like coaching to help you achieve?', { exact: true }).fill('Build strength consistently');
             await mobile.getByRole('button', { name: 'Save draft', exact: true }).click();
             await mobile.getByText('Draft saved. Your assigned coach can review it.', { exact: true }).waitFor();
             await mobile.getByRole('button', { name: 'Sign out', exact: true }).click();
             await mobile.getByLabel('Password', { exact: true }).fill(password);
             await mobile.getByRole('button', { name: 'Sign in', exact: true }).click();
+            await mobile.getByRole('button',{name:'Assessment',exact:true}).click();
             await mobile.getByRole('button', { name: 'Save draft', exact: true }).waitFor();
             assert.equal(await mobile.getByLabel('What would you like coaching to help you achieve?', { exact: true }).inputValue(), 'Build strength consistently');
             // Review the mobile-submitted draft through the existing trainer dashboard.
@@ -190,6 +192,7 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
             await page.getByLabel('Exercise name', { exact: true }).fill('Chair squat');
             await page.getByRole('button', { name: 'Publish workout preview', exact: true }).click();
             await page.getByText('Published preview revision 1. Saving again creates a new revision.', { exact: true }).waitFor();
+            await mobile.getByRole('button',{name:'Train',exact:true}).click();
             await mobile.getByRole('button', { name: 'Refresh workout preview', exact: true }).click();
             await mobile.getByText('Your first workout • Revision 1', { exact: true }).waitFor();
             await mobile.getByText('Chair squat', { exact: true }).waitFor();
@@ -207,7 +210,8 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
             await mobile.getByLabel('Email',{exact:true}).fill('mobile@example.test');
             await mobile.getByLabel('Password',{exact:true}).fill(password);
             await mobile.getByRole('button',{name:'Sign in',exact:true}).click();
-            await mobile.getByRole('button',{name:'Save draft',exact:true}).waitFor();
+            await mobile.getByRole('button',{name:'Train',exact:true}).click();
+            await mobile.getByRole('button',{name:'Sync saved sets',exact:true}).waitFor();
             // Lose the acknowledgement after the server commits; retry must not duplicate.
             let dropped = false;
             await mobile.route('http://127.0.0.1:3001/workout-sets', async route => {
