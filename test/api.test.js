@@ -214,12 +214,15 @@ test('PostgreSQL-backed HTTP invitation, authentication and assessment isolation
             await mobile.getByRole('button',{name:'Sync saved sets',exact:true}).waitFor();
             // Lose the acknowledgement after the server commits; retry must not duplicate.
             let dropped = false;
+            let dropFinished;
+            const dropDone = new Promise(resolve => { dropFinished = resolve; });
             await mobile.route('http://127.0.0.1:3001/workout-sets', async route => {
-              if (!dropped) { dropped=true; await route.fetch(); await route.abort(); } else await route.continue();
+              if (!dropped) { dropped=true; try { await route.fetch(); await route.abort(); } finally { dropFinished(); } } else await route.continue();
             });
             await mobile.getByRole('button',{name:'Sync saved sets',exact:true}).click();
             await mobile.getByRole('button',{name:'Sync saved sets',exact:true}).waitFor();
-            await mobile.waitForFunction(()=>![...document.querySelectorAll('[role=button]')].find(b=>b.textContent==='Sync saved sets')?.hasAttribute('aria-disabled'));
+            await mobile.waitForFunction(()=>document.querySelector('[aria-label="Sync saved sets"]')?.getAttribute('aria-disabled')!=='true');
+            await dropDone;
             await mobile.unroute('http://127.0.0.1:3001/workout-sets');
             await mobile.getByRole('button',{name:'Sync saved sets',exact:true}).click();
             await mobile.getByText('8 reps • 10 kg • synced',{exact:true}).waitFor();

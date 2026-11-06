@@ -45,3 +45,5 @@ With Node.js 24 and Docker running: `npm ci`, then `npm run demo`. See [DEMO.md]
 ## Original prototype integrated
 
 The client now uses the uploaded prototype's green/lime design and Today, Train, Nutrition, Progress and Coach navigation, connected to the existing authentication, assessment and practice-workout backend. Unimplemented provider features remain clearly labelled design previews. See [prototype integration details](docs/PROTOTYPE-INTEGRATION.md).
+
+The latest client experience replaces long profile forms with guided steps and workout grids with a focused set logger. See [client experience notes](docs/CLIENT-EXPERIENCE.md) for behavior, data preservation and remaining validation.

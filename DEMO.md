@@ -55,3 +55,7 @@ The demo deliberately leaves programme activation blocked. Payments, wearables, 
 After sign-in the original prototype-inspired Today screen opens. Use **Assessment** in the header to edit/save your draft. Use **Train** (or **Start your workout**) to open the workout preview and practice logger. Nutrition, Progress and Coach include labelled design-preview interactions; they do not imply live nutrition, wearable, booking or message integrations.
 
 If you already ran an older version, delete only the generated `apps/mobile/dist-demo` folder before running `npm run demo` again. This rebuilds the client without deleting PostgreSQL or your local workout records. Do not remove database volumes or browser storage to update the interface.
+
+## Guided experience
+
+Today now highlights your next workout. Profile opens a three-step conversation with optional quick choices and Save & finish later. Train starts a focused session: log one set, rest if needed, then move to the next set/exercise. Use Sync now to share saved sets with your coach. Session history is collapsed until opened. Starting another session preserves the old one and asks for confirmation.
